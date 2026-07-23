@@ -2,52 +2,212 @@
 
 import { useMemo, useState, type CSSProperties } from "react";
 
-const pipelineStages = [
+type ArchitectureGroup = "all" | "data" | "orchestration" | "reliability";
+
+const architectureNodes = [
+  {
+    id: "sources",
+    short: "API",
+    name: "YouTube sources",
+    service: "YouTube Data API v3 + Kaggle",
+    group: "data",
+    stage: "Input",
+    metric: "10 configured regions",
+    summary:
+      "The live API collects most-popular videos and category mappings while the repository retains the historical CSV archive.",
+    code: "data/*videos.csv · youtube_api_ingestion/lambda_function.py",
+    contract: "Trending videos + category reference JSON",
+  },
+  {
+    id: "ingestion",
+    short: "λ",
+    name: "Ingestion",
+    service: "AWS Lambda",
+    group: "orchestration",
+    stage: "Capture",
+    metric: "50 videos / region",
+    summary:
+      "The handler loops through configured regions, attaches pipeline metadata, and writes Hive-style date and hour partitions.",
+    code: "lambda/youtube_api_ingestion/lambda_function.py",
+    contract: "region={code}/date={date}/hour={hour}",
+  },
   {
     id: "bronze",
-    number: "01",
-    name: "Bronze",
-    eyebrow: "Raw capture",
+    short: "S3",
+    name: "Bronze store",
     service: "Amazon S3",
-    metric: "52 objects",
-    detail:
-      "YouTube API payloads and the Kaggle archive land unchanged, partitioned by region and ingestion time.",
-    artifact: "545.3 MB retained",
+    group: "data",
+    stage: "Raw",
+    metric: "52 objects · 545.3 MB",
+    summary:
+      "Raw JSON, CSV, and category reference files are retained without business transformation for replay and lineage.",
+    code: "scripts/aws_copy.ps1 · s3://yt-data-bronze-qd",
+    contract: "raw_statistics + raw_statistics_reference_data",
+  },
+  {
+    id: "transform",
+    short: "ETL",
+    name: "Statistics ETL",
+    service: "AWS Glue 5.1",
+    group: "data",
+    stage: "Refine",
+    metric: "G.1X · 2 workers",
+    summary:
+      "Spark detects API or Kaggle schema, casts types, standardizes regions, derives engagement metrics, and deduplicates each video-day.",
+    code: "glue_jobs/bronze_to_silver_statistics.py",
+    contract: "Typed, deduplicated statistics Parquet",
+  },
+  {
+    id: "reference",
+    short: "λ",
+    name: "Reference transform",
+    service: "Lambda + AWS SDK for pandas",
+    group: "data",
+    stage: "Parallel branch",
+    metric: "Idempotent by region",
+    summary:
+      "The parallel Lambda normalizes category JSON, removes duplicate category IDs, and updates the Silver reference table.",
+    code: "lambda/json_to_parquet/lambda_function.py",
+    contract: "clean_reference_data partitioned by region",
   },
   {
     id: "silver",
-    number: "02",
-    name: "Silver",
-    eyebrow: "Clean & typed",
-    service: "AWS Glue + Lambda",
-    metric: "68 objects",
-    detail:
-      "Schema-aware transforms normalize dates, enrich categories, and convert the raw layer to compressed Parquet.",
-    artifact: "100.8 MB optimized",
+    short: "S3",
+    name: "Silver store",
+    service: "S3 + Glue Data Catalog",
+    group: "data",
+    stage: "Cleansed",
+    metric: "68 objects · 100.8 MB",
+    summary:
+      "Clean statistics and reference tables are registered in the catalog as compressed Parquet for downstream reads.",
+    code: "yt_pipeline_silver_dev.clean_statistics",
+    contract: "clean_statistics + clean_reference_data",
   },
   {
     id: "quality",
-    number: "03",
+    short: "DQ",
     name: "Quality gate",
-    eyebrow: "Trust before scale",
-    service: "Lambda + SNS",
-    metric: "Passed",
-    detail:
-      "Validation checks completeness, validity, and freshness before downstream business aggregates are allowed to run.",
-    artifact: "0 failed checks",
+    service: "AWS Lambda + Athena",
+    group: "reliability",
+    stage: "Validate",
+    metric: "5 check families",
+    summary:
+      "A 10,000-row sample is checked for volume, critical-column nulls, schema, view ranges, and 48-hour freshness.",
+    code: "data_quality/dq_lambda.py",
+    contract: "quality_passed → boolean choice",
+  },
+  {
+    id: "aggregate",
+    short: "ETL",
+    name: "Gold builder",
+    service: "AWS Glue 5.1",
+    group: "data",
+    stage: "Aggregate",
+    metric: "3 business marts",
+    summary:
+      "Silver statistics join category names and fan out into trending, channel, and category-level business aggregates.",
+    code: "glue_jobs/silver_to_gold_analytics.py",
+    contract: "trending · channel · category analytics",
   },
   {
     id: "gold",
-    number: "04",
-    name: "Gold",
-    eyebrow: "Decision ready",
-    service: "AWS Glue + Athena",
-    metric: "3 marts",
-    detail:
-      "Trending, channel, and category analytics are materialized for fast exploration in Athena and dashboards.",
-    artifact: "108 Parquet objects",
+    short: "S3",
+    name: "Gold store",
+    service: "S3 + Glue Data Catalog",
+    group: "data",
+    stage: "Serve",
+    metric: "108 objects · 1.5 MB",
+    summary:
+      "Decision-ready Parquet marts are partitioned by region and cataloged for efficient analytical consumption.",
+    code: "s3://yt-data-gold-qd/youtube/",
+    contract: "Query-ready regional partitions",
   },
-];
+  {
+    id: "consume",
+    short: "SQL",
+    name: "Analytics",
+    service: "Amazon Athena + QuickSight",
+    group: "data",
+    stage: "Consume",
+    metric: "165.7B views represented",
+    summary:
+      "Athena queries the Gold catalog directly and provides the governed dataset used by this interactive product demo.",
+    code: "demo/data/dashboard.sql",
+    contract: "Regional, channel, and category insights",
+  },
+  {
+    id: "stepfunctions",
+    short: "SFN",
+    name: "Orchestrator",
+    service: "AWS Step Functions",
+    group: "orchestration",
+    stage: "Control plane",
+    metric: "Parallel + retry + catch",
+    summary:
+      "The state machine runs ingestion, waits for S3, launches two Silver branches in parallel, evaluates quality, and publishes Gold.",
+    code: "step_functions/pipeline_orchestration.json",
+    contract: "8m 21s latest successful execution",
+  },
+  {
+    id: "alerts",
+    short: "SNS",
+    name: "Notifications",
+    service: "Amazon SNS",
+    group: "reliability",
+    stage: "Recovery",
+    metric: "Success + 4 failure paths",
+    summary:
+      "Each catch path emits a focused alert for ingestion, transformation, quality, or Gold failures; successful runs notify too.",
+    code: "yt-data-alerts-dev",
+    contract: "Actionable pipeline outcome alerts",
+  },
+  {
+    id: "monitoring",
+    short: "CW",
+    name: "Observability",
+    service: "Amazon CloudWatch",
+    group: "reliability",
+    stage: "Cross-cutting",
+    metric: "Logs at every compute step",
+    summary:
+      "Structured Lambda and Glue logs expose counts, branch outcomes, data-quality results, and execution timing.",
+    code: "CloudWatch log groups + Step Functions history",
+    contract: "Operational evidence and debugging trail",
+  },
+  {
+    id: "iam",
+    short: "IAM",
+    name: "Access boundary",
+    service: "AWS IAM",
+    group: "reliability",
+    stage: "Cross-cutting",
+    metric: "Role-scoped permissions",
+    summary:
+      "Service roles constrain read, write, catalog, query, notification, and orchestration actions to the pipeline resources.",
+    code: "Execution roles and resource policies",
+    contract: "Least-privilege service access",
+  },
+] as const;
+
+const mainlineNodeIds = [
+  "sources",
+  "ingestion",
+  "bronze",
+  "transform",
+  "silver",
+  "quality",
+  "aggregate",
+  "gold",
+  "consume",
+] as const;
+
+const mainlineNodes = mainlineNodeIds.map(
+  (id) => architectureNodes.find((node) => node.id === id)!,
+);
+const referenceNode = architectureNodes.find((node) => node.id === "reference")!;
+const supportNodes = architectureNodes.filter((node) =>
+  ["stepfunctions", "alerts", "monitoring", "iam"].includes(node.id),
+);
 
 const regionData = [
   {
@@ -105,18 +265,51 @@ const categories = [
 const compact = new Intl.NumberFormat("en", { notation: "compact" });
 
 export default function Home() {
-  const [activeStage, setActiveStage] = useState("bronze");
+  const [activeNode, setActiveNode] = useState("stepfunctions");
+  const [architectureGroup, setArchitectureGroup] =
+    useState<ArchitectureGroup>("all");
   const [activeRegion, setActiveRegion] = useState("IN");
 
-  const selectedStage = useMemo(
-    () => pipelineStages.find((stage) => stage.id === activeStage) ?? pipelineStages[0],
-    [activeStage],
+  const selectedNode = useMemo(
+    () =>
+      architectureNodes.find((node) => node.id === activeNode) ??
+      architectureNodes[0],
+    [activeNode],
+  );
+  const visibleArchitectureNodes = useMemo(
+    () =>
+      architectureGroup === "all"
+        ? architectureNodes
+        : architectureNodes.filter((node) => node.group === architectureGroup),
+    [architectureGroup],
   );
   const selectedRegion = useMemo(
     () => regionData.find((region) => region.code === activeRegion) ?? regionData[0],
     [activeRegion],
   );
   const maxViews = Math.max(...regionData.map((region) => region.views));
+
+  function chooseArchitectureGroup(group: ArchitectureGroup) {
+    setArchitectureGroup(group);
+    if (
+      group !== "all" &&
+      architectureNodes.find((node) => node.id === activeNode)?.group !== group
+    ) {
+      const firstMatch = architectureNodes.find((node) => node.group === group);
+      if (firstMatch) setActiveNode(firstMatch.id);
+    }
+  }
+
+  function moveArchitectureSelection(direction: -1 | 1) {
+    const currentIndex = visibleArchitectureNodes.findIndex(
+      (node) => node.id === activeNode,
+    );
+    const safeIndex = currentIndex < 0 ? 0 : currentIndex;
+    const nextIndex =
+      (safeIndex + direction + visibleArchitectureNodes.length) %
+      visibleArchitectureNodes.length;
+    setActiveNode(visibleArchitectureNodes[nextIndex].id);
+  }
 
   return (
     <main>
@@ -128,7 +321,7 @@ export default function Home() {
           <span>TrendForge</span>
         </a>
         <div className="nav-links">
-          <a href="#pipeline">Pipeline</a>
+          <a href="#architecture">Architecture</a>
           <a href="#analytics">Analytics</a>
           <a href="#proof">Run proof</a>
         </div>
@@ -159,8 +352,8 @@ export default function Home() {
               Explore the data
               <span aria-hidden="true">↘</span>
             </a>
-            <a className="button button-secondary" href="#pipeline">
-              Follow the pipeline
+            <a className="button button-secondary" href="#architecture">
+              Explore the architecture
             </a>
           </div>
         </div>
@@ -248,59 +441,221 @@ export default function Home() {
         </p>
       </section>
 
-      <section className="pipeline-section" id="pipeline">
+      <section className="architecture-section" id="architecture">
         <header className="section-heading">
           <div>
-            <p className="eyebrow">A visible path to trust</p>
-            <h2>Every signal earns its way to Gold.</h2>
+            <p className="eyebrow">Interactive system map</p>
+            <h2>Trace every signal, service, and decision.</h2>
           </div>
           <p>
-            Select a stage to see how the architecture changes raw activity into
-            a compact analytical product.
+            Follow the production path from the YouTube API to analytics. Every
+            node opens the implementation contract behind it.
           </p>
         </header>
 
-        <div className="pipeline-shell">
-          <div className="stage-track" role="group" aria-label="Pipeline stages">
-            {pipelineStages.map((stage) => (
+        <div className="architecture-toolbar">
+          <div className="architecture-filters" role="group" aria-label="Filter architecture layers">
+            {[
+              ["all", "Whole system"],
+              ["data", "Data path"],
+              ["orchestration", "Orchestration"],
+              ["reliability", "Reliability"],
+            ].map(([group, label]) => (
               <button
-                className={`stage-button stage-${stage.id}`}
                 type="button"
-                key={stage.id}
-                aria-pressed={activeStage === stage.id}
-                onClick={() => setActiveStage(stage.id)}
+                key={group}
+                aria-pressed={architectureGroup === group}
+                onClick={() => chooseArchitectureGroup(group as ArchitectureGroup)}
               >
-                <span className="stage-number">{stage.number}</span>
-                <span className="stage-copy">
-                  <small>{stage.eyebrow}</small>
-                  <strong>{stage.name}</strong>
-                  <em>{stage.metric}</em>
-                </span>
-                <span className="stage-arrow" aria-hidden="true">
-                  →
-                </span>
+                {label}
               </button>
             ))}
           </div>
+          <p>
+            <span className="status-dot" aria-hidden="true" />
+            Built from the deployed code path
+          </p>
+        </div>
 
-          <div className={`stage-detail detail-${selectedStage.id}`} aria-live="polite">
-            <div>
-              <p className="eyebrow">
-                {selectedStage.number} · {selectedStage.service}
-              </p>
-              <h3>{selectedStage.name}</h3>
+        <div className="architecture-workspace">
+          <div className="architecture-map">
+            <div className="orchestration-rail">
+              <span className="rail-label">Control plane</span>
+              <button
+                type="button"
+                className={`support-node support-orchestrator ${
+                  activeNode === "stepfunctions" ? "is-active" : ""
+                } ${
+                  architectureGroup !== "all" &&
+                  architectureGroup !== "orchestration"
+                    ? "is-dimmed"
+                    : ""
+                }`}
+                aria-pressed={activeNode === "stepfunctions"}
+                onClick={() => setActiveNode("stepfunctions")}
+              >
+                <span className="node-symbol">SFN</span>
+                <span>
+                  <small>Step Functions</small>
+                  <strong>Orchestrate · retry · catch</strong>
+                </span>
+                <em>08:21</em>
+              </button>
+              <div className="rail-steps" aria-hidden="true">
+                <span>Ingest</span>
+                <span>Wait 10s</span>
+                <span>Parallel</span>
+                <span>Quality</span>
+                <span>Gold</span>
+                <span>Notify</span>
+              </div>
             </div>
-            <p>{selectedStage.detail}</p>
-            <div className="stage-proof">
-              <span>
-                <small>Current artifact</small>
-                <strong>{selectedStage.artifact}</strong>
-              </span>
-              <span className="verified-mark" aria-label="Verified in AWS">
-                ✓
-              </span>
+
+            <div className="graph-scroll" tabIndex={0} aria-label="Scrollable production data path">
+              <div className="graph-mainline">
+                {mainlineNodes.map((node, index) => (
+                  <button
+                    type="button"
+                    className={`architecture-node node-${node.id} ${
+                      activeNode === node.id ? "is-active" : ""
+                    } ${
+                      architectureGroup !== "all" &&
+                      architectureGroup !== node.group
+                        ? "is-dimmed"
+                        : ""
+                    }`}
+                    key={node.id}
+                    aria-pressed={activeNode === node.id}
+                    onClick={() => setActiveNode(node.id)}
+                  >
+                    <span className="node-sequence">{String(index + 1).padStart(2, "0")}</span>
+                    <span className="node-symbol">{node.short}</span>
+                    <span className="node-copy">
+                      <small>{node.stage}</small>
+                      <strong>{node.name}</strong>
+                      <em>{node.service}</em>
+                    </span>
+                    {index < mainlineNodes.length - 1 && (
+                      <span className="flow-arrow" aria-hidden="true">
+                        →
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+
+              <div className="parallel-branch">
+                <span className="branch-line" aria-hidden="true" />
+                <span className="branch-label">Parallel reference branch</span>
+                <button
+                  type="button"
+                  className={`architecture-node node-reference ${
+                    activeNode === "reference" ? "is-active" : ""
+                  } ${
+                    architectureGroup !== "all" && architectureGroup !== "data"
+                      ? "is-dimmed"
+                      : ""
+                  }`}
+                  aria-pressed={activeNode === "reference"}
+                  onClick={() => setActiveNode("reference")}
+                >
+                  <span className="node-sequence">04B</span>
+                  <span className="node-symbol">{referenceNode.short}</span>
+                  <span className="node-copy">
+                    <small>{referenceNode.stage}</small>
+                    <strong>{referenceNode.name}</strong>
+                    <em>{referenceNode.service}</em>
+                  </span>
+                </button>
+                <span className="branch-output">
+                  Category lookup
+                  <b aria-hidden="true">↗</b>
+                </span>
+              </div>
+            </div>
+
+            <div className="reliability-lane">
+              <span className="rail-label">Cross-cutting reliability</span>
+              <div>
+                {supportNodes
+                  .filter((node) => node.id !== "stepfunctions")
+                  .map((node) => (
+                    <button
+                      type="button"
+                      className={`support-node ${
+                        activeNode === node.id ? "is-active" : ""
+                      } ${
+                        architectureGroup !== "all" &&
+                        architectureGroup !== node.group
+                          ? "is-dimmed"
+                          : ""
+                      }`}
+                      key={node.id}
+                      aria-pressed={activeNode === node.id}
+                      onClick={() => setActiveNode(node.id)}
+                    >
+                      <span className="node-symbol">{node.short}</span>
+                      <span>
+                        <small>{node.service}</small>
+                        <strong>{node.name}</strong>
+                      </span>
+                    </button>
+                  ))}
+              </div>
             </div>
           </div>
+
+          <aside className="architecture-inspector" aria-live="polite">
+            <div className="inspector-topline">
+              <span className={`group-tag group-${selectedNode.group}`}>
+                {selectedNode.group}
+              </span>
+              <span>
+                {visibleArchitectureNodes.findIndex(
+                  (node) => node.id === selectedNode.id,
+                ) + 1}
+                /{visibleArchitectureNodes.length}
+              </span>
+            </div>
+            <p className="eyebrow">{selectedNode.stage}</p>
+            <h3>{selectedNode.name}</h3>
+            <p className="inspector-service">{selectedNode.service}</p>
+            <p className="inspector-summary">{selectedNode.summary}</p>
+
+            <dl className="inspector-facts">
+              <div>
+                <dt>Live signal</dt>
+                <dd>{selectedNode.metric}</dd>
+              </div>
+              <div>
+                <dt>Output contract</dt>
+                <dd>{selectedNode.contract}</dd>
+              </div>
+            </dl>
+
+            <div className="code-reference">
+              <span>Repository source</span>
+              <code>{selectedNode.code}</code>
+            </div>
+
+            <div className="inspector-controls">
+              <button
+                type="button"
+                aria-label="Previous architecture node"
+                onClick={() => moveArchitectureSelection(-1)}
+              >
+                ←
+              </button>
+              <button
+                type="button"
+                className="inspector-next"
+                onClick={() => moveArchitectureSelection(1)}
+              >
+                Next node
+                <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </aside>
         </div>
       </section>
 

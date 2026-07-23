@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: trendforge-youtube-pipeline
+    runtime: node
+    plan: free
+    buildCommand: npm ci && npm run render:build
+    startCommand: npm run render:start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: 22.13.0
