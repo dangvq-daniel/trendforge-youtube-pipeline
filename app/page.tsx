@@ -382,6 +382,110 @@ const pipelineStages: Array<{
   },
 ];
 
+const iconBase =
+  "https://cdn.jsdelivr.net/npm/aws-icons@3.3.0/icons/architecture-service";
+
+const serviceIcons: Record<ArchitectureNodeId, string> = {
+  youtube: "https://cdn.simpleicons.org/youtube/FF0000",
+  kaggle: "https://cdn.simpleicons.org/kaggle/20BEFF",
+  ingestion: `${iconBase}/AmazonEventBridge.svg`,
+  loader: "https://cdn.simpleicons.org/python/3776AB",
+  bronze: `${iconBase}/AmazonSimpleStorageService.svg`,
+  crawler: `${iconBase}/AWSGlue.svg`,
+  reference: `${iconBase}/AWSLambda.svg`,
+  transform: `${iconBase}/AWSGlue.svg`,
+  silver: `${iconBase}/AmazonSimpleStorageService.svg`,
+  quality: `${iconBase}/AWSLambda.svg`,
+  aggregate: `${iconBase}/AWSGlue.svg`,
+  trending: `${iconBase}/AmazonAthena.svg`,
+  channel: `${iconBase}/AmazonAthena.svg`,
+  category: `${iconBase}/AmazonAthena.svg`,
+  gold: `${iconBase}/AmazonSimpleStorageService.svg`,
+  athena: `${iconBase}/AmazonAthena.svg`,
+  quicksight: `${iconBase}/AmazonQuickSuite.svg`,
+  stepfunctions: `${iconBase}/AWSStepFunctions.svg`,
+  alerts: `${iconBase}/AmazonSimpleNotificationService.svg`,
+  monitoring: `${iconBase}/AmazonCloudWatch.svg`,
+  iam: `${iconBase}/AWSIdentityandAccessManagement.svg`,
+};
+
+const dagNodes: Array<{
+  nodeId: ArchitectureNodeId;
+  stageId: ArchitectureStageId;
+  x: number;
+  y: number;
+  note?: string;
+  tone?: "source" | "bronze" | "silver" | "quality" | "gold" | "consume" | "alert";
+}> = [
+  { nodeId: "youtube", stageId: "sources", x: 42, y: 108, tone: "source" },
+  { nodeId: "ingestion", stageId: "sources", x: 230, y: 108, tone: "source" },
+  { nodeId: "kaggle", stageId: "sources", x: 42, y: 315, tone: "source" },
+  { nodeId: "loader", stageId: "sources", x: 230, y: 315, tone: "source" },
+  { nodeId: "bronze", stageId: "bronze", x: 430, y: 210, tone: "bronze", note: "Raw JSON + CSV" },
+  { nodeId: "crawler", stageId: "bronze", x: 430, y: 455, tone: "bronze" },
+  { nodeId: "reference", stageId: "silver", x: 625, y: 100, tone: "silver" },
+  { nodeId: "transform", stageId: "silver", x: 625, y: 315, tone: "silver" },
+  { nodeId: "silver", stageId: "silver", x: 820, y: 210, tone: "silver", note: "Trusted Parquet" },
+  { nodeId: "quality", stageId: "quality", x: 1015, y: 210, tone: "quality" },
+  { nodeId: "alerts", stageId: "quality", x: 1015, y: 455, tone: "alert", note: "Failure path" },
+  { nodeId: "aggregate", stageId: "gold", x: 1205, y: 210, tone: "gold" },
+  { nodeId: "trending", stageId: "gold", x: 1395, y: 70, tone: "gold" },
+  { nodeId: "channel", stageId: "gold", x: 1395, y: 210, tone: "gold" },
+  { nodeId: "category", stageId: "gold", x: 1395, y: 350, tone: "gold" },
+  { nodeId: "gold", stageId: "gold", x: 1585, y: 210, tone: "gold", note: "Published Parquet" },
+  { nodeId: "athena", stageId: "consume", x: 1770, y: 125, tone: "consume" },
+  { nodeId: "quicksight", stageId: "consume", x: 1770, y: 300, tone: "consume" },
+];
+
+type DagNode = (typeof dagNodes)[number];
+
+const dagEdges: Array<{
+  from: ArchitectureNodeId;
+  to: ArchitectureNodeId;
+  label?: string;
+  kind?: "failure";
+}> = [
+  { from: "youtube", to: "ingestion", label: "scheduled API pull" },
+  { from: "kaggle", to: "loader", label: "historical batch" },
+  { from: "ingestion", to: "bronze", label: "JSON" },
+  { from: "loader", to: "bronze", label: "CSV" },
+  { from: "bronze", to: "reference", label: "category JSON" },
+  { from: "bronze", to: "transform", label: "statistics" },
+  { from: "bronze", to: "crawler", label: "discover schema" },
+  { from: "reference", to: "silver", label: "Parquet" },
+  { from: "transform", to: "silver", label: "Parquet" },
+  { from: "silver", to: "quality", label: "validate" },
+  { from: "quality", to: "alerts", label: "checks fail", kind: "failure" },
+  { from: "quality", to: "aggregate", label: "checks pass" },
+  { from: "aggregate", to: "trending", label: "daily region" },
+  { from: "aggregate", to: "channel", label: "channel grain" },
+  { from: "aggregate", to: "category", label: "category grain" },
+  { from: "trending", to: "gold" },
+  { from: "channel", to: "gold" },
+  { from: "category", to: "gold" },
+  { from: "gold", to: "athena", label: "SQL queries" },
+  { from: "gold", to: "quicksight", label: "BI datasets" },
+];
+
+function dagPath(from: DagNode, to: DagNode) {
+  const nodeWidth = 150;
+  const nodeHeight = 82;
+
+  if (from.x === to.x) {
+    const startX = from.x + nodeWidth / 2;
+    const startY = from.y + nodeHeight;
+    const endY = to.y;
+    return `M ${startX} ${startY} V ${endY}`;
+  }
+
+  const startX = from.x + nodeWidth;
+  const startY = from.y + nodeHeight / 2;
+  const endX = to.x;
+  const endY = to.y + nodeHeight / 2;
+  const middleX = startX + (endX - startX) / 2;
+  return `M ${startX} ${startY} H ${middleX} V ${endY} H ${endX}`;
+}
+
 const regionData = [
   {
     code: "IN",
@@ -651,78 +755,86 @@ export default function Home() {
           <div className="architecture-guardrails" aria-label="Pipeline guardrails">
             <p>Guardrails across every stage</p>
             <ul>
-              <li><span className="node-symbol">IAM</span><strong>AWS IAM</strong><small>Roles &amp; permissions</small></li>
-              <li><span className="node-symbol">SNS</span><strong>Amazon SNS</strong><small>Success &amp; failure alerts</small></li>
-              <li><span className="node-symbol">CW</span><strong>CloudWatch</strong><small>Logging &amp; monitoring</small></li>
+              <li><span className="product-icon"><img src={serviceIcons.iam} alt="" /></span><strong>AWS IAM</strong><small>Roles &amp; permissions</small></li>
+              <li><span className="product-icon"><img src={serviceIcons.alerts} alt="" /></span><strong>Amazon SNS</strong><small>Success &amp; failure alerts</small></li>
+              <li><span className="product-icon"><img src={serviceIcons.monitoring} alt="" /></span><strong>CloudWatch</strong><small>Logging &amp; monitoring</small></li>
             </ul>
           </div>
 
-          <div
-            className="pipeline-map"
-            role="tablist"
-            aria-label="YouTube data pipeline stages"
-          >
-            {pipelineStages.map((stage, stageIndex) => {
-              const stageNodes = stage.nodeIds
-                .map((nodeId) =>
-                  architectureNodes.find((node) => node.id === nodeId),
-                )
-                .filter((node): node is (typeof architectureNodes)[number] =>
-                  Boolean(node),
-                );
-
-              return (
-                <div className="pipeline-stage-wrap" key={stage.id}>
-                  <button
-                    type="button"
-                    role="tab"
-                    id={`stage-tab-${stage.id}`}
-                    className={`pipeline-stage pipeline-stage-${stage.id}`}
-                    aria-selected={activeStage === stage.id}
-                    aria-controls="architecture-stage-detail"
-                    onClick={() => selectStage(stage.id)}
-                    onKeyDown={(event) => {
-                      if (event.key === "ArrowRight") moveStage(1);
-                      if (event.key === "ArrowLeft") moveStage(-1);
-                      if (event.key === "Home") setActiveStage(pipelineStages[0].id);
-                      if (event.key === "End") {
-                        setActiveStage(pipelineStages[pipelineStages.length - 1].id);
-                      }
-                    }}
-                  >
-                    <span className="pipeline-stage-head">
-                      <span className="stage-step">{stage.number}</span>
-                      <span>
-                        <span className="stage-label">{stage.label}</span>
-                        <strong>{stage.title}</strong>
-                      </span>
-                    </span>
-                    <span className="pipeline-stage-summary">{stage.summary}</span>
-                    <span className="pipeline-services">
-                      {stageNodes.map((node) => (
-                        <span className="pipeline-service" key={node.id}>
-                          <span className="node-symbol">{node.short}</span>
-                          <span>
-                            <strong>{node.name}</strong>
-                            <small>{node.stage}</small>
-                          </span>
-                        </span>
-                      ))}
-                    </span>
-                    <span className="pipeline-stage-action">
-                      {activeStage === stage.id ? "Showing details" : "View details"}
-                      <span aria-hidden="true">↓</span>
-                    </span>
-                  </button>
-                  {stageIndex < pipelineStages.length - 1 && (
-                    <span className="pipeline-connector" aria-hidden="true">
-                      <span>handoff</span>
-                      →
-                    </span>
-                  )}
+          <div className="dag-shell">
+            <div className="dag-toolbar">
+              <div>
+                <span className="status-dot" aria-hidden="true" />
+                <strong>Production lineage</strong>
+                <small>Arrows show the exact direction of data movement</small>
+              </div>
+              <p><span className="dag-legend-line" /> data path <span className="dag-legend-line is-failure" /> failure path</p>
+            </div>
+            <div className="dag-scroll" role="region" aria-label="Scrollable pipeline DAG" tabIndex={0}>
+              <div className="dag-canvas">
+                <div className="dag-stage-bands" aria-hidden="true">
+                  {pipelineStages.map((stage) => (
+                    <div
+                      className={`dag-stage-band dag-stage-band-${stage.id} ${activeStage === stage.id ? "is-active" : ""}`}
+                      key={stage.id}
+                    >
+                      <span>{stage.number}</span>
+                      <strong>{stage.title}</strong>
+                    </div>
+                  ))}
                 </div>
-              );
-            })}
+                <svg className="dag-connectors" viewBox="0 0 1960 620" aria-hidden="true">
+                  <defs>
+                    <marker id="dag-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                      <path d="M 0 0 L 8 4 L 0 8 z" />
+                    </marker>
+                    <marker id="dag-arrow-failure" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                      <path d="M 0 0 L 8 4 L 0 8 z" />
+                    </marker>
+                  </defs>
+                  {dagEdges.map((edge) => {
+                    const from = dagNodes.find((node) => node.nodeId === edge.from)!;
+                    const to = dagNodes.find((node) => node.nodeId === edge.to)!;
+                    const labelX = (from.x + 150 + to.x) / 2;
+                    const labelY = (from.y + 41 + to.y + 41) / 2 - 8;
+                    return (
+                      <g className={edge.kind === "failure" ? "is-failure" : ""} key={`${edge.from}-${edge.to}`}>
+                        <path d={dagPath(from, to)} />
+                        {edge.label && (
+                          <text x={labelX} y={labelY} textAnchor="middle">{edge.label}</text>
+                        )}
+                      </g>
+                    );
+                  })}
+                </svg>
+                <div className="dag-nodes" role="list" aria-label="Pipeline services">
+                  {dagNodes.map((layoutNode) => {
+                    const node = architectureNodes.find(
+                      (candidate) => candidate.id === layoutNode.nodeId,
+                    )!;
+                    return (
+                      <button
+                        type="button"
+                        role="listitem"
+                        className={`dag-node dag-node-${layoutNode.tone ?? "source"} ${activeStage === layoutNode.stageId ? "is-active" : ""}`}
+                        style={{ left: layoutNode.x, top: layoutNode.y }}
+                        onClick={() => selectStage(layoutNode.stageId)}
+                        aria-label={`${node.name}. ${node.service}. View ${layoutNode.stageId} stage details.`}
+                        key={layoutNode.nodeId}
+                      >
+                        <span className="product-icon">
+                          <img src={serviceIcons[node.id]} alt="" />
+                        </span>
+                        <span>
+                          <strong>{node.name}</strong>
+                          <small>{layoutNode.note ?? node.stage}</small>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </div>
 
           <section
@@ -775,7 +887,7 @@ export default function Home() {
           </section>
 
           <div className="orchestration-rail">
-            <span className="node-symbol">SFN</span>
+            <span className="product-icon"><img src={serviceIcons.stepfunctions} alt="" /></span>
             <p><strong>AWS Step Functions</strong><small>One observable run from ingestion to notification</small></p>
             <ol aria-label="Step Functions run sequence">
               <li>Ingest</li>
