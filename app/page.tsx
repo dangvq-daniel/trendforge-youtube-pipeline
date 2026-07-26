@@ -2,8 +2,6 @@
 
 import { useMemo, useState, type CSSProperties } from "react";
 
-type ArchitectureGroup = "all" | "data" | "orchestration" | "reliability";
-type GoldMart = "trending" | "channel" | "category";
 type RegionalMetric = "views" | "observations" | "engagement";
 type ChannelSort = "views" | "appearances";
 
@@ -283,6 +281,107 @@ const architectureNodes = [
   },
 ] as const;
 
+type ArchitectureNodeId = (typeof architectureNodes)[number]["id"];
+type ArchitectureStageId =
+  | "sources"
+  | "bronze"
+  | "silver"
+  | "quality"
+  | "gold"
+  | "consume";
+
+const pipelineStages: Array<{
+  id: ArchitectureStageId;
+  number: string;
+  label: string;
+  title: string;
+  summary: string;
+  metric: string;
+  outcome: string;
+  contract: string;
+  code: string;
+  nodeIds: ArchitectureNodeId[];
+}> = [
+  {
+    id: "sources",
+    number: "01",
+    label: "Capture",
+    title: "Sources & ingestion",
+    summary:
+      "Scheduled API collection and a repeatable historical backfill enter one raw-data contract.",
+    metric: "50 videos per configured region",
+    outcome: "Live JSON and regional CSV land with replayable lineage.",
+    contract: "region / date / hour partitions",
+    code: "lambda/youtube_api_ingestion + scripts/aws_copy.ps1",
+    nodeIds: ["youtube", "ingestion", "kaggle", "loader"],
+  },
+  {
+    id: "bronze",
+    number: "02",
+    label: "Land",
+    title: "Bronze · raw",
+    summary:
+      "The raw layer keeps source fidelity intact while the crawler exposes schema for downstream jobs.",
+    metric: "52 objects · 545.3 MB",
+    outcome: "Every transform remains recoverable from immutable inputs.",
+    contract: "raw_statistics + raw reference data",
+    code: "s3://yt-data-bronze-qd/youtube/",
+    nodeIds: ["bronze", "crawler"],
+  },
+  {
+    id: "silver",
+    number: "03",
+    label: "Refine",
+    title: "Silver · cleansed",
+    summary:
+      "Two transforms run in parallel: statistics are standardized while category references are normalized.",
+    metric: "68 objects · 100.8 MB",
+    outcome: "Typed, deduplicated Parquet converges into two trusted tables.",
+    contract: "clean_statistics + clean_reference_data",
+    code: "glue_jobs/bronze_to_silver_statistics.py",
+    nodeIds: ["reference", "transform", "silver"],
+  },
+  {
+    id: "quality",
+    number: "04",
+    label: "Trust",
+    title: "Data quality gate",
+    summary:
+      "Volume, null, schema, range, and freshness checks decide whether the pipeline may publish Gold.",
+    metric: "5 check families · 10K row sample",
+    outcome: "Failed runs stop and alert; only trusted data advances.",
+    contract: "quality_passed = true",
+    code: "data_quality/dq_lambda.py",
+    nodeIds: ["quality", "alerts"],
+  },
+  {
+    id: "gold",
+    number: "05",
+    label: "Serve",
+    title: "Gold · business products",
+    summary:
+      "One aggregation job joins the category lookup once, then produces three purpose-built analytical grains.",
+    metric: "3 marts · 108 objects · 1.5 MB",
+    outcome: "Region, channel, and category questions share one governed source.",
+    contract: "trending + channel + category analytics",
+    code: "glue_jobs/silver_to_gold_analytics.py",
+    nodeIds: ["aggregate", "trending", "channel", "category", "gold"],
+  },
+  {
+    id: "consume",
+    number: "06",
+    label: "Decide",
+    title: "Analytics consumption",
+    summary:
+      "Athena queries the Gold Catalog and serves the same governed results to BI and this product demo.",
+    metric: "165.7B represented views",
+    outcome: "Decision-ready answers replace direct reads from raw storage.",
+    contract: "sanitized Athena snapshot",
+    code: "demo/data/dashboard.sql",
+    nodeIds: ["athena", "quicksight"],
+  },
+];
+
 const regionData = [
   {
     code: "IN",
@@ -337,63 +436,24 @@ const categories = [
 ];
 
 const compact = new Intl.NumberFormat("en", { notation: "compact" });
-const martDetails: Record<
-  GoldMart,
-  { label: string; grain: string; question: string; fields: string }
-> = {
-  trending: {
-    label: "trending_analytics",
-    grain: "Region × trending date",
-    question: "Where is attention concentrating?",
-    fields: "Views · videos · interactions · engagement · channel diversity",
-  },
-  channel: {
-    label: "channel_analytics",
-    grain: "Channel × region",
-    question: "Which publishers sustain momentum?",
-    fields: "Reach · persistence · peak views · engagement · regional rank",
-  },
-  category: {
-    label: "category_analytics",
-    grain: "Category × region × date",
-    question: "Which topics own the largest share?",
-    fields: "View share · video volume · engagement · channel diversity",
-  },
-};
 
 export default function Home() {
-  const [activeNode, setActiveNode] = useState("stepfunctions");
-  const [architectureGroup, setArchitectureGroup] =
-    useState<ArchitectureGroup>("all");
+  const [activeStage, setActiveStage] =
+    useState<ArchitectureStageId>("sources");
   const [activeRegion, setActiveRegion] = useState("IN");
-  const [activeMart, setActiveMart] = useState<GoldMart>("trending");
   const [regionalMetric, setRegionalMetric] =
     useState<RegionalMetric>("views");
-  const [activeCategory, setActiveCategory] = useState("Entertainment");
   const [channelSort, setChannelSort] = useState<ChannelSort>("views");
 
-  const selectedNode = useMemo(
+  const selectedStage = useMemo(
     () =>
-      architectureNodes.find((node) => node.id === activeNode) ??
-      architectureNodes[0],
-    [activeNode],
-  );
-  const visibleArchitectureNodes = useMemo(
-    () =>
-      architectureGroup === "all"
-        ? architectureNodes
-        : architectureNodes.filter((node) => node.group === architectureGroup),
-    [architectureGroup],
+      pipelineStages.find((stage) => stage.id === activeStage) ??
+      pipelineStages[0],
+    [activeStage],
   );
   const selectedRegion = useMemo(
     () => regionData.find((region) => region.code === activeRegion) ?? regionData[0],
     [activeRegion],
-  );
-  const selectedCategory = useMemo(
-    () =>
-      categories.find((category) => category.name === activeCategory) ??
-      categories[0],
-    [activeCategory],
   );
   const sortedChannels = useMemo(
     () =>
@@ -407,6 +467,9 @@ export default function Home() {
   const maxRegionalMetric = Math.max(
     ...regionData.map((region) => region[regionalMetric]),
   );
+  const maxChannelMetric = Math.max(
+    ...channels.map((channel) => channel[channelSort]),
+  );
   const regionalMetricMeta = {
     views: { label: "Views", unit: "billions", suffix: "B" },
     observations: { label: "Observations", unit: "Gold rows", suffix: "" },
@@ -418,57 +481,28 @@ export default function Home() {
     return `${value.toFixed(regionalMetric === "engagement" ? 2 : 1)}${regionalMetricMeta.suffix}`;
   }
 
-  function selectMart(mart: GoldMart) {
-    setActiveMart(mart);
-    setActiveNode(mart);
-  }
+  function selectStage(stageId: ArchitectureStageId) {
+    setActiveStage(stageId);
 
-  function chooseArchitectureGroup(group: ArchitectureGroup) {
-    setArchitectureGroup(group);
-    if (
-      group !== "all" &&
-      architectureNodes.find((node) => node.id === activeNode)?.group !== group
-    ) {
-      const firstMatch = architectureNodes.find((node) => node.group === group);
-      if (firstMatch) setActiveNode(firstMatch.id);
+    if (window.matchMedia("(max-width: 760px)").matches) {
+      window.requestAnimationFrame(() => {
+        document.getElementById("architecture-stage-detail")?.scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "auto"
+            : "smooth",
+          block: "start",
+        });
+      });
     }
   }
 
-  function moveArchitectureSelection(direction: -1 | 1) {
-    const currentIndex = visibleArchitectureNodes.findIndex(
-      (node) => node.id === activeNode,
+  function moveStage(direction: -1 | 1) {
+    const currentIndex = pipelineStages.findIndex(
+      (stage) => stage.id === activeStage,
     );
-    const safeIndex = currentIndex < 0 ? 0 : currentIndex;
     const nextIndex =
-      (safeIndex + direction + visibleArchitectureNodes.length) %
-      visibleArchitectureNodes.length;
-    setActiveNode(visibleArchitectureNodes[nextIndex].id);
-  }
-
-  function renderArchitectureNode(
-    id: (typeof architectureNodes)[number]["id"],
-    className = "",
-  ) {
-    const node = architectureNodes.find((candidate) => candidate.id === id)!;
-    const isFiltered =
-      architectureGroup !== "all" && architectureGroup !== node.group;
-
-    return (
-      <button
-        type="button"
-        className={`diagram-node ${className} ${
-          activeNode === node.id ? "is-active" : ""
-        } ${isFiltered ? "is-filtered" : ""}`}
-        aria-pressed={activeNode === node.id}
-        onClick={() => setActiveNode(node.id)}
-      >
-        <span className="node-symbol">{node.short}</span>
-        <span className="node-copy">
-          <strong>{node.name}</strong>
-          <small>{node.service}</small>
-        </span>
-      </button>
-    );
+      (currentIndex + direction + pipelineStages.length) % pipelineStages.length;
+    setActiveStage(pipelineStages[nextIndex].id);
   }
 
   return (
@@ -608,324 +642,229 @@ export default function Home() {
             <h2>Trace every signal, service, and decision.</h2>
           </div>
           <p>
-            Follow the production path from the YouTube API to analytics. Every
-            node opens the implementation contract behind it.
+            Follow the production path from the YouTube API to analytics. Select
+            a stage to reveal its systems, evidence, and hand-off contract.
           </p>
         </header>
 
-        <div className="architecture-toolbar">
-          <div className="architecture-filters" role="group" aria-label="Filter architecture layers">
-            {[
-              ["all", "Whole system"],
-              ["data", "Data path"],
-              ["orchestration", "Orchestration"],
-              ["reliability", "Reliability"],
-            ].map(([group, label]) => (
-              <button
-                type="button"
-                key={group}
-                aria-pressed={architectureGroup === group}
-                onClick={() => chooseArchitectureGroup(group as ArchitectureGroup)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <p>
-            <span className="status-dot" aria-hidden="true" />
-            Built from the deployed code path
-          </p>
-        </div>
-
-        <div className="architecture-workspace">
-          <div className="architecture-map">
-            <div className="support-ribbon" aria-label="Cross-cutting controls">
-              <span className="rail-label">Security, alerts & observability</span>
-              <div>
-                {renderArchitectureNode("iam", "support-card")}
-                {renderArchitectureNode("alerts", "support-card")}
-                {renderArchitectureNode("monitoring", "support-card")}
-              </div>
-            </div>
-
-            <div
-              className="graph-scroll"
-              tabIndex={0}
-              aria-label="Scrollable YouTube Trending Data Pipeline"
-            >
-              <div className="pipeline-diagram">
-                <section className="pipeline-layer layer-sources">
-                  <header>
-                    <span>01</span>
-                    <h3>Data sources</h3>
-                    <small>Live + historical</small>
-                  </header>
-                  <div className="layer-stack">
-                    {renderArchitectureNode("youtube")}
-                    <span className="mini-flow">scheduled capture ↓</span>
-                    {renderArchitectureNode("ingestion")}
-                    {renderArchitectureNode("kaggle")}
-                    <span className="mini-flow">regional backfill ↓</span>
-                    {renderArchitectureNode("loader")}
-                  </div>
-                </section>
-
-                <span className="layer-flow" aria-hidden="true">→</span>
-
-                <section className="pipeline-layer layer-bronze">
-                  <header>
-                    <span>02</span>
-                    <h3>Bronze layer</h3>
-                    <small>Raw, replayable</small>
-                  </header>
-                  <div className="layer-stack layer-stack-center">
-                    <span className="edge-label">raw JSON + CSV</span>
-                    {renderArchitectureNode("bronze", "storage-node")}
-                    <span className="mini-flow">schema discovery ↓</span>
-                    {renderArchitectureNode("crawler")}
-                    <p className="layer-contract">
-                      Immutable source fidelity
-                      <br />
-                      region / date / hour
-                    </p>
-                  </div>
-                </section>
-
-                <span className="layer-flow" aria-hidden="true">→</span>
-
-                <section className="pipeline-layer layer-silver">
-                  <header>
-                    <span>03</span>
-                    <h3>Silver layer</h3>
-                    <small>Cleansed Parquet</small>
-                  </header>
-                  <div className="parallel-label">Parallel transforms</div>
-                  <div className="parallel-nodes">
-                    {renderArchitectureNode("reference")}
-                    {renderArchitectureNode("transform")}
-                  </div>
-                  <span className="merge-flow" aria-hidden="true">↘ &nbsp; ↙</span>
-                  {renderArchitectureNode("silver", "storage-node")}
-                  <p className="layer-contract">
-                    clean_reference_data
-                    <br />
-                    clean_statistics
-                  </p>
-                </section>
-
-                <span className="layer-flow" aria-hidden="true">→</span>
-
-                <section className="pipeline-layer layer-quality">
-                  <header>
-                    <span>04</span>
-                    <h3>Quality gate</h3>
-                    <small>Pass or alert</small>
-                  </header>
-                  <div className="layer-stack layer-stack-center">
-                    <span className="edge-label">Athena validation</span>
-                    {renderArchitectureNode("quality", "quality-node")}
-                    <ul className="quality-checks" aria-label="Quality checks">
-                      <li>Volume</li>
-                      <li>Nulls</li>
-                      <li>Schema</li>
-                      <li>Ranges</li>
-                      <li>Freshness</li>
-                    </ul>
-                    <span className="pass-badge">quality_passed = true</span>
-                  </div>
-                </section>
-
-                <span className="layer-flow" aria-hidden="true">→</span>
-
-                <section className="pipeline-layer layer-gold">
-                  <header>
-                    <span>05</span>
-                    <h3>Gold layer</h3>
-                    <small>Business marts</small>
-                  </header>
-                  {renderArchitectureNode("aggregate", "gold-builder")}
-                  <span className="fanout-label">broadcast join → 3 marts</span>
-                  <div className="mart-stack">
-                    {renderArchitectureNode("trending", "mart-node")}
-                    {renderArchitectureNode("channel", "mart-node")}
-                    {renderArchitectureNode("category", "mart-node")}
-                  </div>
-                  <span className="merge-flow" aria-hidden="true">↘ &nbsp; ↓ &nbsp; ↙</span>
-                  {renderArchitectureNode("gold", "storage-node")}
-                </section>
-
-                <span className="layer-flow" aria-hidden="true">→</span>
-
-                <section className="pipeline-layer layer-consumption">
-                  <header>
-                    <span>06</span>
-                    <h3>Consumption</h3>
-                    <small>Query + decide</small>
-                  </header>
-                  <div className="layer-stack layer-stack-center">
-                    <span className="edge-label">catalog queries</span>
-                    {renderArchitectureNode("athena")}
-                    <span className="mini-flow">governed result sets ↓</span>
-                    {renderArchitectureNode("quicksight")}
-                    <a className="dashboard-output" href="#analytics">
-                      <span>TF</span>
-                      <strong>TrendForge dashboard</strong>
-                      <small>Athena snapshot</small>
-                    </a>
-                  </div>
-                </section>
-              </div>
-            </div>
-
-            <div className="control-flow-rail">
-              <span className="rail-label">Step Functions control plane</span>
-              {renderArchitectureNode("stepfunctions", "control-node")}
-              <ol aria-label="State machine sequence">
-                <li>Ingest</li>
-                <li>Wait 10s</li>
-                <li>Parallel Silver</li>
-                <li>DQ choice</li>
-                <li>Gold build</li>
-                <li>SNS outcome</li>
-              </ol>
-            </div>
+        <div className="architecture-journey">
+          <div className="architecture-guardrails" aria-label="Pipeline guardrails">
+            <p>Guardrails across every stage</p>
+            <ul>
+              <li><span className="node-symbol">IAM</span><strong>AWS IAM</strong><small>Roles &amp; permissions</small></li>
+              <li><span className="node-symbol">SNS</span><strong>Amazon SNS</strong><small>Success &amp; failure alerts</small></li>
+              <li><span className="node-symbol">CW</span><strong>CloudWatch</strong><small>Logging &amp; monitoring</small></li>
+            </ul>
           </div>
 
-          <aside className="architecture-inspector" aria-live="polite">
-            <div className="inspector-topline">
-              <span className={`group-tag group-${selectedNode.group}`}>
-                {selectedNode.group}
-              </span>
-              <span>
-                {visibleArchitectureNodes.findIndex(
-                  (node) => node.id === selectedNode.id,
-                ) + 1}
-                /{visibleArchitectureNodes.length}
-              </span>
-            </div>
-            <p className="eyebrow">{selectedNode.stage}</p>
-            <h3>{selectedNode.name}</h3>
-            <p className="inspector-service">{selectedNode.service}</p>
-            <p className="inspector-summary">{selectedNode.summary}</p>
+          <div
+            className="pipeline-map"
+            role="tablist"
+            aria-label="YouTube data pipeline stages"
+          >
+            {pipelineStages.map((stage, stageIndex) => {
+              const stageNodes = stage.nodeIds
+                .map((nodeId) =>
+                  architectureNodes.find((node) => node.id === nodeId),
+                )
+                .filter((node): node is (typeof architectureNodes)[number] =>
+                  Boolean(node),
+                );
 
-            <dl className="inspector-facts">
+              return (
+                <div className="pipeline-stage-wrap" key={stage.id}>
+                  <button
+                    type="button"
+                    role="tab"
+                    id={`stage-tab-${stage.id}`}
+                    className={`pipeline-stage pipeline-stage-${stage.id}`}
+                    aria-selected={activeStage === stage.id}
+                    aria-controls="architecture-stage-detail"
+                    onClick={() => selectStage(stage.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "ArrowRight") moveStage(1);
+                      if (event.key === "ArrowLeft") moveStage(-1);
+                      if (event.key === "Home") setActiveStage(pipelineStages[0].id);
+                      if (event.key === "End") {
+                        setActiveStage(pipelineStages[pipelineStages.length - 1].id);
+                      }
+                    }}
+                  >
+                    <span className="pipeline-stage-head">
+                      <span className="stage-step">{stage.number}</span>
+                      <span>
+                        <span className="stage-label">{stage.label}</span>
+                        <strong>{stage.title}</strong>
+                      </span>
+                    </span>
+                    <span className="pipeline-stage-summary">{stage.summary}</span>
+                    <span className="pipeline-services">
+                      {stageNodes.map((node) => (
+                        <span className="pipeline-service" key={node.id}>
+                          <span className="node-symbol">{node.short}</span>
+                          <span>
+                            <strong>{node.name}</strong>
+                            <small>{node.stage}</small>
+                          </span>
+                        </span>
+                      ))}
+                    </span>
+                    <span className="pipeline-stage-action">
+                      {activeStage === stage.id ? "Showing details" : "View details"}
+                      <span aria-hidden="true">↓</span>
+                    </span>
+                  </button>
+                  {stageIndex < pipelineStages.length - 1 && (
+                    <span className="pipeline-connector" aria-hidden="true">
+                      <span>handoff</span>
+                      →
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <section
+            className="pipeline-detail"
+            id="architecture-stage-detail"
+            role="tabpanel"
+            aria-labelledby={`stage-tab-${selectedStage.id}`}
+          >
+            <div className="pipeline-detail-intro">
+              <p className="eyebrow">
+                Stage {selectedStage.number} · {selectedStage.label}
+              </p>
+              <h3>{selectedStage.title}</h3>
+              <p>{selectedStage.summary}</p>
+            </div>
+            <dl className="pipeline-detail-facts">
               <div>
-                <dt>Live signal</dt>
-                <dd>{selectedNode.metric}</dd>
+                <dt>Run proof</dt>
+                <dd>{selectedStage.metric}</dd>
               </div>
               <div>
-                <dt>Output contract</dt>
-                <dd>{selectedNode.contract}</dd>
+                <dt>Input → output</dt>
+                <dd>{selectedStage.contract}</dd>
+              </div>
+              <div>
+                <dt>Stage outcome</dt>
+                <dd>{selectedStage.outcome}</dd>
               </div>
             </dl>
-
-            <div className="code-reference">
+            <div className="pipeline-detail-source">
               <span>Repository source</span>
-              <code>{selectedNode.code}</code>
+              <code>{selectedStage.code}</code>
+              <div className="stage-controls">
+                <button type="button" onClick={() => moveStage(-1)}>
+                  <span aria-hidden="true">←</span>
+                  Previous
+                </button>
+                <button type="button" onClick={() => moveStage(1)}>
+                  Next stage
+                  <span aria-hidden="true">→</span>
+                </button>
+              </div>
+              {selectedStage.id === "gold" && (
+                <a href="#analytics">
+                  Explore Gold results
+                  <span aria-hidden="true">↓</span>
+                </a>
+              )}
             </div>
+          </section>
 
-            <div className="inspector-controls">
-              <button
-                type="button"
-                aria-label="Previous architecture node"
-                onClick={() => moveArchitectureSelection(-1)}
-              >
-                ←
-              </button>
-              <button
-                type="button"
-                className="inspector-next"
-                onClick={() => moveArchitectureSelection(1)}
-              >
-                Next node
-                <span aria-hidden="true">→</span>
-              </button>
-            </div>
-          </aside>
+          <div className="orchestration-rail">
+            <span className="node-symbol">SFN</span>
+            <p><strong>AWS Step Functions</strong><small>One observable run from ingestion to notification</small></p>
+            <ol aria-label="Step Functions run sequence">
+              <li>Ingest</li>
+              <li>Wait</li>
+              <li>Parallel Silver</li>
+              <li>Quality gate</li>
+              <li>Gold aggregation</li>
+              <li>Notify</li>
+            </ol>
+          </div>
         </div>
       </section>
 
       <section className="analytics-section" id="analytics">
-        <header className="section-heading analytics-heading">
+        <header className="section-heading analytics-heading story-heading">
           <div>
             <p className="eyebrow">Gold layer · sanitized Athena snapshot</p>
-            <h2>Three marts. One view of attention.</h2>
+            <h2>Follow the story behind 165.7B views.</h2>
           </div>
-          <label className="region-control">
-            <span>Spotlight region</span>
-            <select
-              value={activeRegion}
-              onChange={(event) => setActiveRegion(event.target.value)}
-            >
-              {regionData.map((region) => (
-                <option key={region.code} value={region.code}>
-                  {region.name}
-                </option>
-              ))}
-            </select>
-          </label>
+          <p>
+            Start with where attention concentrates, move into what drives it,
+            then finish with the channels that sustain momentum.
+          </p>
         </header>
 
-        <div className="gold-mart-switcher">
-          <div className="mart-tabs" role="group" aria-label="Inspect a Gold mart">
-            {(Object.entries(martDetails) as [GoldMart, (typeof martDetails)[GoldMart]][]).map(
-              ([mart, details], index) => (
-                <button
-                  type="button"
-                  key={mart}
-                  aria-pressed={activeMart === mart}
-                  onClick={() => selectMart(mart)}
-                >
-                  <span>0{index + 1}</span>
-                  <strong>{details.label}</strong>
-                </button>
-              ),
-            )}
+        <div className="gold-story-lead" aria-label="Gold snapshot summary">
+          <div className="story-path">
+            <span>Read the Gold layer as a decision path</span>
+            <strong>Three chapters. One answer.</strong>
+            <nav aria-label="Gold story chapters">
+              <a href="#chapter-concentration">01 Concentration</a>
+              <a href="#chapter-composition">02 Composition</a>
+              <a href="#chapter-staying-power">03 Staying power</a>
+            </nav>
           </div>
-          <div className="mart-summary" aria-live="polite">
+          <dl>
             <div>
-              <span>Gold question</span>
-              <strong>{martDetails[activeMart].question}</strong>
+              <dt>Views represented</dt>
+              <dd>165.7B</dd>
             </div>
             <div>
-              <span>Grain</span>
-              <strong>{martDetails[activeMart].grain}</strong>
+              <dt>Trending observations</dt>
+              <dd>158,204</dd>
             </div>
-            <p>{martDetails[activeMart].fields}</p>
-          </div>
+            <div>
+              <dt>Active regions</dt>
+              <dd>4</dd>
+            </div>
+            <div>
+              <dt>Top-two category share</dt>
+              <dd>61.1%</dd>
+            </div>
+          </dl>
         </div>
 
-        <div className="analytics-kpis" aria-label={`${selectedRegion.name} Gold metrics`}>
-          <article>
-            <span>Views represented</span>
-            <strong>{selectedRegion.views.toFixed(1)}B</strong>
-            <small>{((selectedRegion.views / 165.7) * 100).toFixed(1)}% of snapshot</small>
-          </article>
-          <article>
-            <span>Trending observations</span>
-            <strong>{compact.format(selectedRegion.observations)}</strong>
-            <small>summed Gold video rows</small>
-          </article>
-          <article>
-            <span>Average engagement</span>
-            <strong>{selectedRegion.engagement.toFixed(2)}%</strong>
-            <small>likes + comments per view</small>
-          </article>
-          <article>
-            <span>Leading signal</span>
-            <strong className="kpi-text">{selectedRegion.topSignal}</strong>
-            <small>top channel or category</small>
-          </article>
-        </div>
+        <div className="gold-story">
+          <section
+            className="story-chapter"
+            id="chapter-concentration"
+            aria-labelledby="story-concentration"
+          >
+            <aside className="story-copy">
+              <span className="story-number">01</span>
+              <p className="eyebrow">Where attention concentrates</p>
+              <h3 id="story-concentration">Attention is highly concentrated.</h3>
+              <p className="story-takeaway">
+                <strong>{selectedRegion.name}</strong> represents{" "}
+                <strong>{((selectedRegion.views / 165.7) * 100).toFixed(1)}%</strong>{" "}
+                of snapshot views—{selectedRegion.views.toFixed(1)}B of 165.7B.
+              </p>
+              <p className="story-note">
+                Select a region in the chart and compare reach, observation
+                volume, or average engagement without changing the scope of the
+                later chapters.
+              </p>
+              <div className="story-source">
+                <span>Gold source</span>
+                <code>trending_analytics</code>
+                <small>Region × trending date</small>
+              </div>
+            </aside>
 
-        <div className="analytics-grid">
           <article
-            className={`regional-panel ${activeMart === "trending" ? "is-mart-active" : ""}`}
+              className="regional-panel story-visual"
           >
             <div className="panel-head">
               <div>
-                <p className="eyebrow">trending_analytics</p>
-                <h3>Regional signal</h3>
+                  <p className="eyebrow">Regional comparison</p>
+                  <h3>{regionalMetricMeta.label} by region</h3>
               </div>
               <div
                 className="metric-toggle"
@@ -951,7 +890,7 @@ export default function Home() {
               </div>
             </div>
             <p className="chart-context">
-              {regionalMetricMeta.label} by region · {regionalMetricMeta.unit}
+                {regionalMetricMeta.unit} · select a bar to update the reading
             </p>
 
             <div
@@ -1004,85 +943,101 @@ export default function Home() {
               </dl>
             </div>
           </article>
+          </section>
 
-          <article
-            className={`category-panel ${activeMart === "category" ? "is-mart-active" : ""}`}
+          <section
+            className="story-chapter story-chapter-reverse"
+            id="chapter-composition"
+            aria-labelledby="story-composition"
           >
+            <aside className="story-copy">
+              <span className="story-number">02</span>
+              <p className="eyebrow">What drives it</p>
+              <h3 id="story-composition">Two categories shape the market.</h3>
+              <p className="story-takeaway">
+                <strong>Entertainment and Music</strong> generate{" "}
+                <strong>61.1%</strong> of represented views—101.25B combined.
+              </p>
+              <p className="story-note">
+                Entertainment leads Music by 15.41B views, while the remaining
+                five groups divide the final 38.9%.
+              </p>
+              <div className="story-source">
+                <span>Gold source</span>
+                <code>category_analytics</code>
+                <small>Category × region × date</small>
+              </div>
+            </aside>
+
+            <article className="category-panel story-visual">
             <div className="panel-head">
               <div>
-                <p className="eyebrow">category_analytics</p>
-                <h3>Category gravity</h3>
+                  <p className="eyebrow">Share of represented views</p>
+                  <h3>Category composition</h3>
               </div>
               <span className="unit-label">all active regions</span>
             </div>
             <div
-              className="category-stack"
-              aria-label="Entertainment 35.2 percent, Music 25.9 percent, Film and Animation 9.2 percent, Comedy 7.1 percent, People and Blogs 7.1 percent, News and Politics 4.2 percent, Other 11.3 percent"
+                className="category-ranking"
+                role="img"
+                aria-label="Entertainment 35.2 percent, Music 25.9 percent, Other 11.3 percent, Film and Animation 9.2 percent, Comedy 7.1 percent, People and Blogs 7.1 percent, and News and Politics 4.2 percent"
             >
-              {categories.map((category) => (
-                <button
-                  type="button"
+                {[...categories]
+                  .sort((a, b) => b.share - a.share)
+                  .map((category, index) => (
+                  <div
+                      className={index < 2 ? "is-leading" : ""}
                   key={category.name}
-                  aria-label={`${category.name}, ${category.share.toFixed(1)} percent`}
-                  aria-pressed={activeCategory === category.name}
-                  onClick={() => setActiveCategory(category.name)}
-                  style={
-                    {
-                      "--segment-size": category.share,
-                      "--segment-color": category.color,
-                    } as CSSProperties
-                  }
-                />
-              ))}
-            </div>
-            <ul className="category-list">
-              {categories.slice(0, 6).map((category) => (
-                <li key={category.name}>
-                  <button
-                    type="button"
-                    aria-pressed={activeCategory === category.name}
-                    onClick={() => setActiveCategory(category.name)}
                   >
-                    <span
-                      className="legend-dot"
-                      style={{ "--dot-color": category.color } as CSSProperties}
-                      aria-hidden="true"
-                    />
-                    <span>{category.name}</span>
+                    <span className="category-rank">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span className="category-name">{category.name}</span>
+                    <span className="category-bar">
+                      <span
+                        style={{
+                          "--category-width": `${(category.share / 35.2) * 100}%`,
+                          "--category-color": category.color,
+                        } as CSSProperties}
+                      />
+                    </span>
                     <strong>{category.share.toFixed(1)}%</strong>
-                  </button>
-                </li>
-              ))}
-            </ul>
-            <div className="category-detail" aria-live="polite">
-              <span
-                className="category-swatch"
-                style={{ "--dot-color": selectedCategory.color } as CSSProperties}
-                aria-hidden="true"
-              />
-              <p>
-                <span>Selected category</span>
-                <strong>{selectedCategory.name}</strong>
-              </p>
-              <p>
-                <span>Views represented</span>
-                <strong>{selectedCategory.views.toFixed(2)}B</strong>
-              </p>
-              <p>
-                <span>Snapshot share</span>
-                <strong>{selectedCategory.share.toFixed(1)}%</strong>
-              </p>
+                    <small>{category.views.toFixed(2)}B views</small>
+                  </div>
+                ))}
             </div>
           </article>
-        </div>
+          </section>
 
-        <article
-          className={`channels-panel ${activeMart === "channel" ? "is-mart-active" : ""}`}
-        >
+          <section
+            className="story-chapter"
+            id="chapter-staying-power"
+            aria-labelledby="story-staying-power"
+          >
+            <aside className="story-copy">
+              <span className="story-number">03</span>
+              <p className="eyebrow">Who sustains it</p>
+              <h3 id="story-staying-power">Reach and persistence are different.</h3>
+              <p className="story-takeaway">
+                <strong>T-Series</strong> leads on both: 6.31B views across 688
+                trending appearances.
+              </p>
+              <p className="story-note">
+                Amit Bhadana is fifth by views at 3.06B, but second by persistence
+                with 428 appearances.
+              </p>
+              <div className="story-source">
+                <span>Gold source</span>
+                <code>channel_analytics</code>
+                <small>Channel × region</small>
+              </div>
+            </aside>
+
+            <article className="channels-panel story-visual">
           <div className="panel-head">
             <div>
-              <p className="eyebrow">channel_analytics</p>
-              <h3>Channels with staying power</h3>
+                  <p className="eyebrow">Cross-region leaders</p>
+                  <h3>Reach versus persistence</h3>
             </div>
             <div className="metric-toggle" role="group" aria-label="Sort channels">
               <button
@@ -1102,36 +1057,55 @@ export default function Home() {
             </div>
           </div>
           <p className="chart-context">
-            Latest deduplicated cross-region leaders · click a Gold mart above to
-            trace its architecture node.
+                {channelSort === "views"
+                  ? "Ranked by represented views"
+                  : "Ranked by trending appearances"}
           </p>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Rank</th>
-                  <th>Channel</th>
-                  <th>Region</th>
-                  <th>Views</th>
-                  <th>Trending appearances</th>
-                </tr>
-              </thead>
-              <tbody>
+              <ol className="channel-leaderboard">
                 {sortedChannels.map((channel, index) => (
-                  <tr key={`${channel.name}-${channel.region}`}>
-                    <td data-label="Rank">{String(index + 1).padStart(2, "0")}</td>
-                    <th scope="row">{channel.name}</th>
-                    <td data-label="Region">
-                      <span className="region-pill">{channel.region}</span>
-                    </td>
-                    <td data-label="Views">{channel.views.toFixed(2)}B</td>
-                    <td data-label="Appearances">{channel.appearances}</td>
-                  </tr>
+                  <li key={`${channel.name}-${channel.region}`}>
+                    <span className="channel-rank">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <p>
+                      <strong>{channel.name}</strong>
+                      <small>{channel.region}</small>
+                    </p>
+                    <span className="channel-bar">
+                      <span
+                        style={{
+                          "--channel-width": `${(channel[channelSort] / maxChannelMetric) * 100}%`,
+                        } as CSSProperties}
+                      />
+                    </span>
+                    <dl>
+                      <div>
+                        <dt>Views</dt>
+                        <dd>{channel.views.toFixed(2)}B</dd>
+                      </div>
+                      <div>
+                        <dt>Appearances</dt>
+                        <dd>{channel.appearances}</dd>
+                      </div>
+                    </dl>
+                  </li>
                 ))}
-              </tbody>
-            </table>
-          </div>
+              </ol>
         </article>
+          </section>
+        </div>
+
+        <div className="gold-provenance">
+          <p>
+            Three Gold grains, read as one story.
+            <span>Captured 18 Jul 2026 · deduplicated latest aggregates</span>
+          </p>
+          <ul aria-label="Gold tables used">
+            <li>trending_analytics</li>
+            <li>category_analytics</li>
+            <li>channel_analytics</li>
+          </ul>
+        </div>
       </section>
 
       <section className="architecture-proof">
@@ -1168,7 +1142,7 @@ export default function Home() {
           <span>TrendForge</span>
         </a>
         <p>
-          A live, sanitized product demo of the YouTube Trending Data Pipeline.
+          A sanitized product demo of the YouTube Trending Data Pipeline.
           No AWS credentials are exposed to the browser.
         </p>
         <a href="#top">Back to top ↑</a>
