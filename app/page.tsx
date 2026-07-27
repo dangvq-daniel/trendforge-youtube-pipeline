@@ -4,6 +4,8 @@ import { useMemo, useState, type CSSProperties } from "react";
 
 type RegionalMetric = "views" | "observations" | "engagement";
 type ChannelSort = "views" | "appearances";
+type GoldMart = "trending" | "category" | "channel";
+type CategoryMetric = "share" | "views";
 
 const architectureNodes = [
   {
@@ -522,11 +524,26 @@ const regionData = [
 ];
 
 const channels = [
-  { name: "T-Series", region: "IN", views: 6.31, appearances: 688 },
-  { name: "xxxtentacion", region: "GB", views: 4.21, appearances: 88 },
-  { name: "Marvel Entertainment", region: "IN", views: 4.07, appearances: 196 },
-  { name: "FoxStarHindi", region: "IN", views: 3.21, appearances: 152 },
-  { name: "Amit Bhadana", region: "IN", views: 3.06, appearances: 428 },
+  { name: "T-Series", region: "IN", views: 2.12, appearances: 221 },
+  { name: "Marvel Entertainment", region: "IN", views: 1.28, appearances: 65 },
+  { name: "FoxStarHindi", region: "IN", views: 1.26, appearances: 56 },
+  { name: "Amit Bhadana", region: "IN", views: 1.02, appearances: 140 },
+  { name: "Speed Records", region: "IN", views: 0.8, appearances: 197 },
+  { name: "NickyJamTV", region: "GB", views: 8.52, appearances: 56 },
+  { name: "Ozuna", region: "GB", views: 8.31, appearances: 85 },
+  { name: "Bad Bunny", region: "GB", views: 6.89, appearances: 36 },
+  { name: "DrakeVEVO", region: "GB", views: 6.58, appearances: 62 },
+  { name: "ChildishGambinoVEVO", region: "GB", views: 6.1, appearances: 36 },
+  { name: "ChildishGambinoVEVO", region: "US", views: 3.76, appearances: 25 },
+  { name: "ibighit", region: "US", views: 2.24, appearances: 80 },
+  { name: "Dude Perfect", region: "US", views: 1.87, appearances: 131 },
+  { name: "Marvel Entertainment", region: "US", views: 1.81, appearances: 125 },
+  { name: "ArianaGrandeVevo", region: "US", views: 1.58, appearances: 43 },
+  { name: "Marvel Entertainment", region: "CA", views: 1.01, appearances: 39 },
+  { name: "T-Series", region: "CA", views: 0.8, appearances: 81 },
+  { name: "Dude Perfect", region: "CA", views: 0.73, appearances: 70 },
+  { name: "YouTube Spotlight", region: "CA", views: 0.64, appearances: 13 },
+  { name: "ibighit", region: "CA", views: 0.51, appearances: 19 },
 ];
 
 const categories = [
@@ -539,15 +556,58 @@ const categories = [
   { name: "Other", share: 11.3, views: 18.73, color: "var(--line-strong)" },
 ];
 
+const categoriesByRegion = {
+  ALL: categories,
+  IN: [
+    { name: "Entertainment", share: 40.7, views: 16.12, color: "var(--coral)" },
+    { name: "Music", share: 25.6, views: 10.15, color: "var(--gold)" },
+    { name: "Film & Animation", share: 9.7, views: 3.85, color: "var(--sage)" },
+    { name: "Comedy", share: 7.3, views: 2.89, color: "var(--bronze)" },
+    { name: "News & Politics", share: 5, views: 1.99, color: "var(--blue)" },
+    { name: "Sports", share: 3.5, views: 1.38, color: "var(--ink-soft)" },
+  ],
+  GB: [
+    { name: "Music", share: 74.4, views: 171.16, color: "var(--gold)" },
+    { name: "Entertainment", share: 12.9, views: 29.79, color: "var(--coral)" },
+    { name: "Film & Animation", share: 3.6, views: 8.36, color: "var(--sage)" },
+    { name: "People & Blogs", share: 2.5, views: 5.75, color: "var(--ink-soft)" },
+    { name: "Comedy", share: 1.7, views: 3.96, color: "var(--bronze)" },
+    { name: "Sports", share: 1.5, views: 3.34, color: "var(--blue)" },
+  ],
+  US: [
+    { name: "Music", share: 41.5, views: 40.13, color: "var(--gold)" },
+    { name: "Entertainment", share: 21.3, views: 20.6, color: "var(--coral)" },
+    { name: "Film & Animation", share: 7.5, views: 7.28, color: "var(--sage)" },
+    { name: "Comedy", share: 5.3, views: 5.12, color: "var(--bronze)" },
+    { name: "People & Blogs", share: 5.1, views: 4.92, color: "var(--ink-soft)" },
+    { name: "Sports", share: 4.6, views: 4.4, color: "var(--blue)" },
+  ],
+  CA: [
+    { name: "Entertainment", share: 29.2, views: 13.67, color: "var(--coral)" },
+    { name: "Music", share: 28.1, views: 13.18, color: "var(--gold)" },
+    { name: "Comedy", share: 7.9, views: 3.71, color: "var(--bronze)" },
+    { name: "People & Blogs", share: 6.9, views: 3.23, color: "var(--ink-soft)" },
+    { name: "Sports", share: 6.4, views: 3, color: "var(--blue)" },
+    { name: "Film & Animation", share: 6.3, views: 2.94, color: "var(--sage)" },
+  ],
+} satisfies Record<string, typeof categories>;
+
 const compact = new Intl.NumberFormat("en", { notation: "compact" });
 
 export default function Home() {
   const [activeStage, setActiveStage] =
     useState<ArchitectureStageId>("sources");
-  const [activeRegion, setActiveRegion] = useState("IN");
+  const [activeMart, setActiveMart] = useState<GoldMart>("trending");
+  const [activeRegion, setActiveRegion] = useState("ALL");
   const [regionalMetric, setRegionalMetric] =
     useState<RegionalMetric>("views");
   const [channelSort, setChannelSort] = useState<ChannelSort>("views");
+  const [channelRegion, setChannelRegion] = useState("ALL");
+  const [channelQuery, setChannelQuery] = useState("");
+  const [categoryRegion, setCategoryRegion] = useState("ALL");
+  const [categoryMetric, setCategoryMetric] =
+    useState<CategoryMetric>("share");
+  const [categoryFocus, setCategoryFocus] = useState("ALL");
 
   const selectedStage = useMemo(
     () =>
@@ -555,24 +615,46 @@ export default function Home() {
       pipelineStages[0],
     [activeStage],
   );
-  const selectedRegion = useMemo(
-    () => regionData.find((region) => region.code === activeRegion) ?? regionData[0],
+  const visibleRegions = useMemo(
+    () =>
+      activeRegion === "ALL"
+        ? regionData
+        : regionData.filter((region) => region.code === activeRegion),
     [activeRegion],
   );
+  const selectedRegion =
+    regionData.find((region) => region.code === activeRegion) ?? null;
   const sortedChannels = useMemo(
     () =>
-      [...channels].sort((a, b) =>
-        channelSort === "views"
-          ? b.views - a.views
-          : b.appearances - a.appearances,
-      ),
-    [channelSort],
+      [...channels]
+        .filter(
+          (channel) =>
+            (channelRegion === "ALL" || channel.region === channelRegion) &&
+            channel.name.toLowerCase().includes(channelQuery.toLowerCase()),
+        )
+        .sort((a, b) =>
+          channelSort === "views"
+            ? b.views - a.views
+            : b.appearances - a.appearances,
+        ),
+    [channelQuery, channelRegion, channelSort],
+  );
+  const categoryRows = (
+    categoriesByRegion[categoryRegion as keyof typeof categoriesByRegion] ??
+    categories
+  ).filter(
+    (category) => categoryFocus === "ALL" || category.name === categoryFocus,
   );
   const maxRegionalMetric = Math.max(
     ...regionData.map((region) => region[regionalMetric]),
   );
   const maxChannelMetric = Math.max(
-    ...channels.map((channel) => channel[channelSort]),
+    ...sortedChannels.map((channel) => channel[channelSort]),
+    1,
+  );
+  const maxCategoryMetric = Math.max(
+    ...categoryRows.map((category) => category[categoryMetric]),
+    1,
   );
   const regionalMetricMeta = {
     views: { label: "Views", unit: "billions", suffix: "B" },
@@ -902,321 +984,143 @@ export default function Home() {
       </section>
 
       <section className="analytics-section" id="analytics">
-        <header className="section-heading analytics-heading story-heading">
+        <header className="section-heading analytics-heading">
           <div>
-            <p className="eyebrow">Gold layer · sanitized Athena snapshot</p>
-            <h2>Follow the story behind 165.7B views.</h2>
+            <p className="eyebrow">Gold layer · mart-led analytics</p>
+            <h2>Three marts. Three focused dashboards.</h2>
           </div>
           <p>
-            Start with where attention concentrates, move into what drives it,
-            then finish with the channels that sustain momentum.
+            Choose the business question first. Every filter, metric, and chart
+            below stays inside the selected mart&apos;s grain.
           </p>
         </header>
 
-        <div className="gold-story-lead" aria-label="Gold snapshot summary">
-          <div className="story-path">
-            <span>Read the Gold layer as a decision path</span>
-            <strong>Three chapters. One answer.</strong>
-            <nav aria-label="Gold story chapters">
-              <a href="#chapter-concentration">01 Concentration</a>
-              <a href="#chapter-composition">02 Composition</a>
-              <a href="#chapter-staying-power">03 Staying power</a>
-            </nav>
-          </div>
-          <dl>
-            <div>
-              <dt>Views represented</dt>
-              <dd>165.7B</dd>
-            </div>
-            <div>
-              <dt>Trending observations</dt>
-              <dd>158,204</dd>
-            </div>
-            <div>
-              <dt>Active regions</dt>
-              <dd>4</dd>
-            </div>
-            <div>
-              <dt>Top-two category share</dt>
-              <dd>61.1%</dd>
-            </div>
-          </dl>
+        <div className="mart-switcher" role="tablist" aria-label="Gold marts">
+          {([
+            {
+              id: "trending",
+              number: "01",
+              table: "trending_analytics",
+              title: "Market pulse",
+              grain: "Region × trending date",
+              question: "Where and when is attention moving?",
+            },
+            {
+              id: "category",
+              number: "02",
+              table: "category_analytics",
+              title: "Content mix",
+              grain: "Category × region × date",
+              question: "Which topics earn the audience?",
+            },
+            {
+              id: "channel",
+              number: "03",
+              table: "channel_analytics",
+              title: "Channel leaders",
+              grain: "Channel × region",
+              question: "Who combines reach with persistence?",
+            },
+          ] as const).map((mart) => (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeMart === mart.id}
+              aria-controls={`mart-panel-${mart.id}`}
+              onClick={() => setActiveMart(mart.id)}
+              key={mart.id}
+            >
+              <span>{mart.number}</span>
+              <strong>{mart.title}</strong>
+              <code>{mart.table}</code>
+              <small>{mart.question}</small>
+              <em>{mart.grain}</em>
+            </button>
+          ))}
         </div>
 
-        <div className="gold-story">
-          <section
-            className="story-chapter"
-            id="chapter-concentration"
-            aria-labelledby="story-concentration"
-          >
-            <aside className="story-copy">
-              <span className="story-number">01</span>
-              <p className="eyebrow">Where attention concentrates</p>
-              <h3 id="story-concentration">Attention is highly concentrated.</h3>
-              <p className="story-takeaway">
-                <strong>{selectedRegion.name}</strong> represents{" "}
-                <strong>{((selectedRegion.views / 165.7) * 100).toFixed(1)}%</strong>{" "}
-                of snapshot views—{selectedRegion.views.toFixed(1)}B of 165.7B.
-              </p>
-              <p className="story-note">
-                Select a region in the chart and compare reach, observation
-                volume, or average engagement without changing the scope of the
-                later chapters.
-              </p>
-              <div className="story-source">
-                <span>Gold source</span>
-                <code>trending_analytics</code>
-                <small>Region × trending date</small>
+        <div className="mart-dashboard">
+          {activeMart === "trending" && (
+            <section id="mart-panel-trending" role="tabpanel" className="mart-panel">
+              <header className="mart-panel-head">
+                <div><p className="eyebrow">Dashboard 01 · market pulse</p><h3>Regional trending performance</h3><p>Compare reach, volume, and engagement without leaving the region-by-date grain.</p></div>
+                <div><span>Gold source</span><code>trending_analytics</code><small>region × trending_date_parsed</small></div>
+              </header>
+              <div className="mart-filters" aria-label="Trending analytics filters">
+                <label>Region<select value={activeRegion} onChange={(event) => setActiveRegion(event.target.value)}><option value="ALL">All regions</option>{regionData.map((region) => <option value={region.code} key={region.code}>{region.name}</option>)}</select></label>
+                <fieldset><legend>Metric</legend>{([["views","Views"],["observations","Videos"],["engagement","Engagement"]] as [RegionalMetric,string][]).map(([metric,label]) => <button type="button" aria-pressed={regionalMetric === metric} onClick={() => setRegionalMetric(metric)} key={metric}>{label}</button>)}</fieldset>
+                <label>Date coverage<span className="filter-static">Captured period · 2017–2018</span></label>
               </div>
-            </aside>
-
-          <article
-              className="regional-panel story-visual"
-          >
-            <div className="panel-head">
-              <div>
-                  <p className="eyebrow">Regional comparison</p>
-                  <h3>{regionalMetricMeta.label} by region</h3>
-              </div>
-              <div
-                className="metric-toggle"
-                role="group"
-                aria-label="Regional chart metric"
-              >
-                {(
-                  [
-                    ["views", "Views"],
-                    ["observations", "Volume"],
-                    ["engagement", "Engagement"],
-                  ] as [RegionalMetric, string][]
-                ).map(([metric, label]) => (
-                  <button
-                    type="button"
-                    key={metric}
-                    aria-pressed={regionalMetric === metric}
-                    onClick={() => setRegionalMetric(metric)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <p className="chart-context">
-                {regionalMetricMeta.unit} · select a bar to update the reading
-            </p>
-
-            <div
-              className="region-chart"
-              aria-label={`${regionalMetricMeta.label} by region`}
-            >
-              {regionData.map((region) => (
-                <button
-                  type="button"
-                  className="region-row"
-                  key={region.code}
-                  aria-pressed={activeRegion === region.code}
-                  onClick={() => setActiveRegion(region.code)}
-                >
-                  <span className="region-code">{region.code}</span>
-                  <span className="bar-rail">
-                    <span
-                      className="bar-fill"
-                      style={{
-                        "--bar-width": `${(region[regionalMetric] / maxRegionalMetric) * 100}%`,
-                      } as CSSProperties}
-                    />
-                  </span>
-                  <strong>{formatRegionalMetric(region[regionalMetric])}</strong>
-                </button>
-              ))}
-            </div>
-
-            <div className="region-spotlight" aria-live="polite">
-              <div>
-                <span className="spotlight-code">{selectedRegion.code}</span>
-                <p>
-                  <strong>{selectedRegion.name}</strong>
-                  <small>Selected region</small>
-                </p>
-              </div>
-              <dl>
-                <div>
-                  <dt>Observations</dt>
-                  <dd>{compact.format(selectedRegion.observations)}</dd>
-                </div>
-                <div>
-                  <dt>Avg. engagement</dt>
-                  <dd>{selectedRegion.engagement.toFixed(2)}%</dd>
-                </div>
-                <div>
-                  <dt>Top signal</dt>
-                  <dd>{selectedRegion.topSignal}</dd>
-                </div>
+              <dl className="mart-kpis">
+                <div><dt>Views represented</dt><dd>{visibleRegions.reduce((sum, region) => sum + region.views, 0).toFixed(1)}B</dd></div>
+                <div><dt>Trending videos</dt><dd>{compact.format(visibleRegions.reduce((sum, region) => sum + region.observations, 0))}</dd></div>
+                <div><dt>Average engagement</dt><dd>{(visibleRegions.reduce((sum, region) => sum + region.engagement, 0) / visibleRegions.length).toFixed(2)}%</dd></div>
+                <div><dt>Regions in scope</dt><dd>{visibleRegions.length}</dd></div>
               </dl>
-            </div>
-          </article>
-          </section>
-
-          <section
-            className="story-chapter story-chapter-reverse"
-            id="chapter-composition"
-            aria-labelledby="story-composition"
-          >
-            <aside className="story-copy">
-              <span className="story-number">02</span>
-              <p className="eyebrow">What drives it</p>
-              <h3 id="story-composition">Two categories shape the market.</h3>
-              <p className="story-takeaway">
-                <strong>Entertainment and Music</strong> generate{" "}
-                <strong>61.1%</strong> of represented views—101.25B combined.
-              </p>
-              <p className="story-note">
-                Entertainment leads Music by 15.41B views, while the remaining
-                five groups divide the final 38.9%.
-              </p>
-              <div className="story-source">
-                <span>Gold source</span>
-                <code>category_analytics</code>
-                <small>Category × region × date</small>
-              </div>
-            </aside>
-
-            <article className="category-panel story-visual">
-            <div className="panel-head">
-              <div>
-                  <p className="eyebrow">Share of represented views</p>
-                  <h3>Category composition</h3>
-              </div>
-              <span className="unit-label">all active regions</span>
-            </div>
-            <div
-                className="category-ranking"
-                role="img"
-                aria-label="Entertainment 35.2 percent, Music 25.9 percent, Other 11.3 percent, Film and Animation 9.2 percent, Comedy 7.1 percent, People and Blogs 7.1 percent, and News and Politics 4.2 percent"
-            >
-                {[...categories]
-                  .sort((a, b) => b.share - a.share)
-                  .map((category, index) => (
-                  <div
-                      className={index < 2 ? "is-leading" : ""}
-                  key={category.name}
-                  >
-                    <span className="category-rank">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <span className="category-name">{category.name}</span>
-                    <span className="category-bar">
-                      <span
-                        style={{
-                          "--category-width": `${(category.share / 35.2) * 100}%`,
-                          "--category-color": category.color,
-                        } as CSSProperties}
-                      />
-                    </span>
-                    <strong>{category.share.toFixed(1)}%</strong>
-                    <small>{category.views.toFixed(2)}B views</small>
+              <div className="mart-visual-grid">
+                <article className="mart-chart-card">
+                  <div className="panel-head"><div><p className="eyebrow">{regionalMetricMeta.unit}</p><h3>{regionalMetricMeta.label} by region</h3></div></div>
+                  <div className="region-chart" aria-label={`${regionalMetricMeta.label} by region`}>
+                    {visibleRegions.map((region) => <button type="button" className="region-row" key={region.code} onClick={() => setActiveRegion(region.code)}><span className="region-code">{region.code}</span><span className="bar-rail"><span className="bar-fill" style={{"--bar-width":`${(region[regionalMetric] / maxRegionalMetric) * 100}%`} as CSSProperties} /></span><strong>{formatRegionalMetric(region[regionalMetric])}</strong></button>)}
                   </div>
-                ))}
-            </div>
-          </article>
-          </section>
-
-          <section
-            className="story-chapter"
-            id="chapter-staying-power"
-            aria-labelledby="story-staying-power"
-          >
-            <aside className="story-copy">
-              <span className="story-number">03</span>
-              <p className="eyebrow">Who sustains it</p>
-              <h3 id="story-staying-power">Reach and persistence are different.</h3>
-              <p className="story-takeaway">
-                <strong>T-Series</strong> leads on both: 6.31B views across 688
-                trending appearances.
-              </p>
-              <p className="story-note">
-                Amit Bhadana is fifth by views at 3.06B, but second by persistence
-                with 428 appearances.
-              </p>
-              <div className="story-source">
-                <span>Gold source</span>
-                <code>channel_analytics</code>
-                <small>Channel × region</small>
+                </article>
+                <aside className="mart-reading" aria-live="polite">
+                  <span>What this mart says</span>
+                  <h4>{selectedRegion ? `${selectedRegion.name} in focus` : "India carries most represented reach."}</h4>
+                  <p>{selectedRegion ? `${selectedRegion.views.toFixed(1)}B views, ${compact.format(selectedRegion.observations)} trending observations, and ${selectedRegion.engagement.toFixed(2)}% average engagement.` : "Use region to isolate one market, then switch the metric without changing the dashboard grain."}</p>
+                </aside>
               </div>
-            </aside>
+            </section>
+          )}
 
-            <article className="channels-panel story-visual">
-          <div className="panel-head">
-            <div>
-                  <p className="eyebrow">Cross-region leaders</p>
-                  <h3>Reach versus persistence</h3>
-            </div>
-            <div className="metric-toggle" role="group" aria-label="Sort channels">
-              <button
-                type="button"
-                aria-pressed={channelSort === "views"}
-                onClick={() => setChannelSort("views")}
-              >
-                Rank by views
-              </button>
-              <button
-                type="button"
-                aria-pressed={channelSort === "appearances"}
-                onClick={() => setChannelSort("appearances")}
-              >
-                Rank by persistence
-              </button>
-            </div>
-          </div>
-          <p className="chart-context">
-                {channelSort === "views"
-                  ? "Ranked by represented views"
-                  : "Ranked by trending appearances"}
-          </p>
-              <ol className="channel-leaderboard">
-                {sortedChannels.map((channel, index) => (
-                  <li key={`${channel.name}-${channel.region}`}>
-                    <span className="channel-rank">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <p>
-                      <strong>{channel.name}</strong>
-                      <small>{channel.region}</small>
-                    </p>
-                    <span className="channel-bar">
-                      <span
-                        style={{
-                          "--channel-width": `${(channel[channelSort] / maxChannelMetric) * 100}%`,
-                        } as CSSProperties}
-                      />
-                    </span>
-                    <dl>
-                      <div>
-                        <dt>Views</dt>
-                        <dd>{channel.views.toFixed(2)}B</dd>
-                      </div>
-                      <div>
-                        <dt>Appearances</dt>
-                        <dd>{channel.appearances}</dd>
-                      </div>
-                    </dl>
-                  </li>
-                ))}
-              </ol>
-        </article>
-          </section>
-        </div>
+          {activeMart === "category" && (
+            <section id="mart-panel-category" role="tabpanel" className="mart-panel">
+              <header className="mart-panel-head">
+                <div><p className="eyebrow">Dashboard 02 · content mix</p><h3>Category attention share</h3><p>See which content categories capture views inside a selected regional market.</p></div>
+                <div><span>Gold source</span><code>category_analytics</code><small>category × region × trending date</small></div>
+              </header>
+              <div className="mart-filters" aria-label="Category analytics filters">
+                <label>Region<select value={categoryRegion} onChange={(event) => setCategoryRegion(event.target.value)}><option value="ALL">All regions</option>{regionData.map((region) => <option value={region.code} key={region.code}>{region.name}</option>)}</select></label>
+                <label>Category<select value={categoryFocus} onChange={(event) => setCategoryFocus(event.target.value)}><option value="ALL">All categories</option>{categories.map((category) => <option value={category.name} key={category.name}>{category.name}</option>)}</select></label>
+                <fieldset><legend>Metric</legend><button type="button" aria-pressed={categoryMetric === "share"} onClick={() => setCategoryMetric("share")}>View share</button><button type="button" aria-pressed={categoryMetric === "views"} onClick={() => setCategoryMetric("views")}>Views</button></fieldset>
+              </div>
+              <dl className="mart-kpis">
+                <div><dt>Leading category</dt><dd>{categoryRows[0]?.name ?? "—"}</dd></div>
+                <div><dt>Leading share</dt><dd>{categoryRows[0]?.share.toFixed(1) ?? "0"}%</dd></div>
+                <div><dt>Views in scope</dt><dd>{categoryRows.reduce((sum, category) => sum + category.views, 0).toFixed(1)}B</dd></div>
+                <div><dt>Categories shown</dt><dd>{categoryRows.length}</dd></div>
+              </dl>
+              <article className="mart-chart-card mart-chart-wide">
+                <div className="panel-head"><div><p className="eyebrow">{categoryRegion === "ALL" ? "All active regions" : regionData.find((region) => region.code === categoryRegion)?.name}</p><h3>{categoryMetric === "share" ? "Share of views" : "Represented views"}</h3></div></div>
+                <div className="category-ranking">{[...categoryRows].sort((a,b) => b[categoryMetric] - a[categoryMetric]).map((category,index) => <div className={index < 2 ? "is-leading" : ""} key={category.name}><span className="category-rank">{String(index+1).padStart(2,"0")}</span><span className="category-name">{category.name}</span><span className="category-bar"><span style={{"--category-width":`${(category[categoryMetric] / maxCategoryMetric) * 100}%`,"--category-color":category.color} as CSSProperties}/></span><strong>{categoryMetric === "share" ? `${category.share.toFixed(1)}%` : `${category.views.toFixed(2)}B`}</strong><small>{category.views.toFixed(2)}B views</small></div>)}</div>
+              </article>
+            </section>
+          )}
 
-        <div className="gold-provenance">
-          <p>
-            Three Gold grains, read as one story.
-            <span>Captured 18 Jul 2026 · deduplicated latest aggregates</span>
-          </p>
-          <ul aria-label="Gold tables used">
-            <li>trending_analytics</li>
-            <li>category_analytics</li>
-            <li>channel_analytics</li>
-          </ul>
+          {activeMart === "channel" && (
+            <section id="mart-panel-channel" role="tabpanel" className="mart-panel">
+              <header className="mart-panel-head">
+                <div><p className="eyebrow">Dashboard 03 · channel leaders</p><h3>Reach versus persistence</h3><p>Rank channels inside a region by represented views or repeat trending appearances.</p></div>
+                <div><span>Gold source</span><code>channel_analytics</code><small>channel_title × region</small></div>
+              </header>
+              <div className="mart-filters" aria-label="Channel analytics filters">
+                <label>Region<select value={channelRegion} onChange={(event) => setChannelRegion(event.target.value)}><option value="ALL">All regions</option>{regionData.map((region) => <option value={region.code} key={region.code}>{region.name}</option>)}</select></label>
+                <label>Channel search<input type="search" value={channelQuery} onChange={(event) => setChannelQuery(event.target.value)} placeholder="Search channels" /></label>
+                <fieldset><legend>Rank by</legend><button type="button" aria-pressed={channelSort === "views"} onClick={() => setChannelSort("views")}>Views</button><button type="button" aria-pressed={channelSort === "appearances"} onClick={() => setChannelSort("appearances")}>Persistence</button></fieldset>
+              </div>
+              <dl className="mart-kpis">
+                <div><dt>Top channel</dt><dd>{sortedChannels[0]?.name ?? "—"}</dd></div>
+                <div><dt>Top views</dt><dd>{sortedChannels[0]?.views.toFixed(2) ?? "0"}B</dd></div>
+                <div><dt>Top appearances</dt><dd>{Math.max(...sortedChannels.map((channel) => channel.appearances),0)}</dd></div>
+                <div><dt>Channels in scope</dt><dd>{sortedChannels.length}</dd></div>
+              </dl>
+              <article className="mart-chart-card mart-chart-wide">
+                <div className="panel-head"><div><p className="eyebrow">{channelRegion === "ALL" ? "Cross-region leaders" : `${channelRegion} leaders`}</p><h3>{channelSort === "views" ? "Ranked by views" : "Ranked by trending persistence"}</h3></div></div>
+                <ol className="channel-leaderboard">{sortedChannels.slice(0,8).map((channel,index) => <li key={`${channel.name}-${channel.region}`}><span className="channel-rank">{String(index+1).padStart(2,"0")}</span><p><strong>{channel.name}</strong><small>{channel.region}</small></p><span className="channel-bar"><span style={{"--channel-width":`${(channel[channelSort] / maxChannelMetric) * 100}%`} as CSSProperties}/></span><dl><div><dt>Views</dt><dd>{channel.views.toFixed(2)}B</dd></div><div><dt>Appearances</dt><dd>{channel.appearances}</dd></div></dl></li>)}</ol>
+                {sortedChannels.length === 0 && <p className="mart-empty">No channels match this filter.</p>}
+              </article>
+            </section>
+          )}
         </div>
       </section>
 
