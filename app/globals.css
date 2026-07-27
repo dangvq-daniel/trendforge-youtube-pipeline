@@ -5214,3 +5214,124 @@ footer > a:last-child {
     margin: 16px;
   }
 }
+/* Readability pass: keep compact data density without forcing users to squint. */
+.architecture-guardrails > p {
+  font-size: 11px;
+}
+
+.architecture-guardrails li strong {
+  font-size: 13px;
+}
+
+.architecture-guardrails li small {
+  font-size: 11px;
+}
+
+.dag-toolbar strong {
+  font-size: 13px;
+}
+
+.dag-toolbar small {
+  font-size: 11px;
+}
+
+.dag-toolbar > p,
+.dag-stage-band > span {
+  font-size: 10px;
+}
+
+.dag-stage-band > strong {
+  font-size: 16px;
+}
+
+.dag-connectors text {
+  font-size: 10px;
+  stroke-width: 6px;
+}
+
+.dag-node strong {
+  font-size: 11px;
+}
+
+.dag-node small {
+  font-size: 9px;
+}
+
+.orchestration-rail > p strong {
+  font-size: 12px;
+}
+
+.orchestration-rail > p small {
+  font-size: 10px;
+}
+
+.orchestration-rail li {
+  font-size: 9px;
+}
+
+.mart-switcher code,
+.mart-switcher small {
+  font-size: 11px;
+}
+
+.mart-switcher em {
+  font-size: 9px;
+}
+
+.mart-panel-head > div:first-child > p:last-child {
+  font-size: 14px;
+}
+
+.mart-panel-head > div:last-child span {
+  font-size: 9px;
+}
+
+.mart-panel-head > div:last-child code {
+  font-size: 13px;
+}
+
+.mart-panel-head > div:last-child small,
+.mart-filters label,
+.mart-filters fieldset {
+  font-size: 10px;
+}
+
+.mart-filters select,
+.mart-filters input,
+.filter-static {
+  font-size: 12px;
+}
+
+.mart-filters fieldset button,
+.mart-kpis dt,
+.mart-reading > span {
+  font-size: 10px;
+}
+
+.mart-reading p {
+  font-size: 13px;
+}
+
+.region-code,
+.category-rank,
+.channel-rank {
+  font-size: 11px;
+}
+
+.region-row strong,
+.category-name {
+  font-size: 14px;
+}
+
+.category-ranking > div > small,
+.channel-leaderboard li > p small {
+  font-size: 11px;
+}
+
+.channel-leaderboard dt {
+  font-size: 10px;
+}
+
+.channel-leaderboard dd {
+  font-size: 13px;
+}
