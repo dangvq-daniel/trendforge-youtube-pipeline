@@ -5335,3 +5335,558 @@ footer > a:last-child {
 .channel-leaderboard dd {
   font-size: 13px;
 }
+
+/* AWS Step Functions execution console */
+.execution-section {
+  padding: 112px max(32px, calc((100vw - 1440px) / 2)) 120px;
+  background: #f2f3f3;
+  color: #16191f;
+}
+
+.execution-heading {
+  margin-bottom: 36px;
+}
+
+.aws-console {
+  overflow: hidden;
+  border: 1px solid #aab7b8;
+  border-radius: 3px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgba(15, 33, 45, 0.12);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.aws-console-topbar {
+  min-height: 46px;
+  padding: 0 18px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  background: #232f3e;
+  color: #fff;
+  font-size: 13px;
+}
+
+.aws-console-brand,
+.aws-console-context {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.aws-cube {
+  color: #ff9900;
+  font-size: 18px;
+}
+
+.aws-console-context {
+  color: #d5dbdb;
+}
+
+.aws-console-context strong {
+  overflow: hidden;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aws-region {
+  color: #d5dbdb;
+}
+
+.aws-execution-header {
+  padding: 24px 28px 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  border-bottom: 1px solid #eaeded;
+}
+
+.aws-breadcrumb {
+  margin: 0 0 8px;
+  color: #0073bb;
+  font-size: 12px;
+}
+
+.aws-execution-header h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.aws-execution-meta {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  color: #5f6b7a;
+  font-size: 12px;
+}
+
+.aws-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.aws-status i {
+  width: 9px;
+  height: 9px;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+
+.aws-status-idle {
+  color: #5f6b7a;
+}
+
+.aws-status-running {
+  color: #0073bb;
+}
+
+.aws-status-succeeded {
+  color: #1d8102;
+}
+
+.aws-status-failed,
+.aws-status-timed_out,
+.aws-status-aborted {
+  color: #d13212;
+}
+
+.aws-execution-actions {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.aws-execution-actions a,
+.aws-execution-actions button {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid #879596;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #fff;
+  color: #16191f;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.aws-execution-actions button {
+  border-color: #ec7211;
+  background: #ff9900;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.aws-execution-actions button:hover:not(:disabled) {
+  background: #ec7211;
+}
+
+.aws-execution-actions button:disabled {
+  border-color: #d5dbdb;
+  background: #eaeded;
+  color: #879596;
+  cursor: not-allowed;
+}
+
+.aws-alert {
+  margin: 16px 28px 0;
+  padding: 12px 15px;
+  border: 1px solid #d13212;
+  border-left-width: 5px;
+  display: grid;
+  gap: 3px;
+  background: #fff7f7;
+  color: #16191f;
+  font-size: 12px;
+}
+
+.aws-alert strong {
+  color: #d13212;
+  font-size: 13px;
+}
+
+.aws-console-tabs {
+  padding: 18px 28px 0;
+  display: flex;
+  gap: 28px;
+  border-bottom: 1px solid #aab7b8;
+}
+
+.aws-console-tabs button {
+  margin: 0 0 -1px;
+  padding: 0 2px 12px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #0073bb;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.aws-console-tabs button[aria-selected="true"] {
+  border-color: #ff9900;
+  color: #16191f;
+}
+
+.aws-console-workspace {
+  min-height: 390px;
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  border-bottom: 1px solid #aab7b8;
+}
+
+.aws-state-list {
+  border-right: 1px solid #aab7b8;
+  background: #fff;
+}
+
+.aws-state-list > div {
+  min-height: 47px;
+  padding: 0 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #eaeded;
+  font-size: 13px;
+}
+
+.aws-state-list > div span {
+  min-width: 25px;
+  padding: 3px 7px;
+  border-radius: 10px;
+  background: #eaeded;
+  text-align: center;
+  font-size: 11px;
+}
+
+.aws-state-list ol {
+  max-height: 343px;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.aws-state-list li {
+  min-height: 51px;
+  padding: 7px 13px;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) 12px;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #eaeded;
+}
+
+.aws-state-list li > span {
+  color: #687078;
+  font-size: 11px;
+}
+
+.aws-state-list li p,
+.aws-state-list li strong,
+.aws-state-list li small {
+  min-width: 0;
+  margin: 0;
+  display: block;
+}
+
+.aws-state-list li strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aws-state-list li small {
+  margin-top: 3px;
+  color: #687078;
+  font-size: 10px;
+}
+
+.aws-state-list li i,
+.aws-state-node > i {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #879596;
+  border-radius: 50%;
+}
+
+.aws-state-list li.is-running {
+  background: #f1faff;
+}
+
+.aws-state-list li.is-running i,
+.aws-state-node.is-running > i {
+  border-color: #0073bb;
+  border-top-color: transparent;
+  animation: aws-spin 0.8s linear infinite;
+}
+
+.aws-state-list li.is-succeeded i,
+.aws-state-node.is-succeeded > i {
+  border-color: #1d8102;
+  background: #1d8102;
+  box-shadow: inset 0 0 0 2px #fff;
+}
+
+.aws-state-list li.is-failed i,
+.aws-state-node.is-failed > i {
+  border-color: #d13212;
+  background: #d13212;
+}
+
+@keyframes aws-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.aws-graph-scroll {
+  overflow: auto;
+  background-color: #f8f8f8;
+  background-image:
+    linear-gradient(#eaeded 1px, transparent 1px),
+    linear-gradient(90deg, #eaeded 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.aws-graph-canvas {
+  position: relative;
+  width: 1730px;
+  height: 300px;
+  margin: 42px 24px;
+}
+
+.aws-graph-canvas svg {
+  position: absolute;
+  inset: 0;
+  width: 1730px;
+  height: 230px;
+  overflow: visible;
+}
+
+.aws-graph-canvas svg path {
+  fill: none;
+  stroke: #687078;
+  stroke-width: 2;
+  marker-end: url(#step-arrow);
+}
+
+.aws-graph-canvas svg marker path {
+  fill: #687078;
+}
+
+.aws-state-node {
+  position: absolute;
+  width: 170px;
+  min-height: 68px;
+  padding: 9px 10px;
+  border: 2px solid #879596;
+  border-radius: 3px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 12px;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(15, 33, 45, 0.16);
+}
+
+.aws-state-node > span {
+  width: 27px;
+  height: 27px;
+  border-radius: 2px;
+  display: grid;
+  place-items: center;
+  background: #5f6b7a;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.aws-state-node p,
+.aws-state-node strong,
+.aws-state-node small {
+  min-width: 0;
+  margin: 0;
+  display: block;
+}
+
+.aws-state-node strong {
+  overflow: hidden;
+  font-size: 10px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aws-state-node small {
+  margin-top: 4px;
+  color: #687078;
+  font-size: 9px;
+}
+
+.aws-state-node.is-running {
+  border-color: #0073bb;
+  box-shadow: 0 0 0 3px rgba(0, 115, 187, 0.14);
+}
+
+.aws-state-node.is-succeeded {
+  border-color: #1d8102;
+}
+
+.aws-state-node.is-failed {
+  border-color: #d13212;
+  background: #fff7f7;
+}
+
+.aws-history {
+  padding: 22px 28px 28px;
+}
+
+.aws-history-head,
+.aws-history-head > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.aws-history-head {
+  margin-bottom: 12px;
+  color: #5f6b7a;
+  font-size: 11px;
+}
+
+.aws-history-head h4 {
+  margin: 0;
+  color: #16191f;
+  font-size: 16px;
+}
+
+.aws-history-head > div span {
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: #eaeded;
+}
+
+.aws-history-table {
+  overflow: hidden;
+  border: 1px solid #aab7b8;
+  border-radius: 2px;
+}
+
+.aws-history-row {
+  min-height: 39px;
+  padding: 0 12px;
+  display: grid;
+  grid-template-columns: 60px 140px minmax(220px, 1fr) minmax(180px, 1fr);
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid #eaeded;
+  font-size: 11px;
+}
+
+.aws-history-row:first-child {
+  border-top: 0;
+}
+
+.aws-history-row.is-heading {
+  background: #f2f3f3;
+  font-weight: 700;
+}
+
+.aws-history-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+  .aws-execution-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .aws-console-workspace {
+    grid-template-columns: 220px minmax(0, 1fr);
+  }
+
+  .aws-history-row {
+    grid-template-columns: 45px 110px minmax(180px, 1fr) minmax(140px, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .execution-section {
+    padding: 76px 18px 84px;
+  }
+
+  .aws-console-topbar {
+    grid-template-columns: 1fr auto;
+  }
+
+  .aws-console-context {
+    display: none;
+  }
+
+  .aws-execution-header,
+  .aws-history {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .aws-execution-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .aws-execution-actions a,
+  .aws-execution-actions button {
+    flex: 1;
+  }
+
+  .aws-console-tabs {
+    padding-left: 16px;
+    gap: 18px;
+    overflow-x: auto;
+  }
+
+  .aws-console-tabs button {
+    white-space: nowrap;
+  }
+
+  .aws-console-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .aws-state-list {
+    display: none;
+  }
+
+  .aws-history-table {
+    overflow-x: auto;
+  }
+
+  .aws-history-row {
+    min-width: 700px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aws-state-list li.is-running i,
+  .aws-state-node.is-running > i {
+    animation: none;
+  }
+}

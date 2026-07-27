@@ -1,6 +1,11 @@
 "use client";
 
-import { useMemo, useState, type CSSProperties } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 
 type RegionalMetric = "views" | "observations" | "engagement";
 type ChannelSort = "views" | "appearances";
@@ -158,7 +163,7 @@ const architectureNodes = [
     service: "Gold business mart",
     group: "data",
     stage: "Daily region mart",
-    metric: "158,204 observations · 165.7B views",
+    metric: "375,942 observations · 498.7B views",
     summary:
       "Daily regional summaries expose views, interactions, engagement, channels, categories, and peak performance.",
     code: "yt_pipeline_gold_dev.trending_analytics",
@@ -376,7 +381,7 @@ const pipelineStages: Array<{
     title: "Analytics consumption",
     summary:
       "Athena queries the Gold Catalog and serves the same governed results to BI and this product demo.",
-    metric: "165.7B represented views",
+    metric: "498.7B represented views",
     outcome: "Decision-ready answers replace direct reads from raw storage.",
     contract: "sanitized Athena snapshot",
     code: "demo/data/dashboard.sql",
@@ -489,108 +494,175 @@ function dagPath(from: DagNode, to: DagNode) {
 }
 
 const regionData = [
-  {
-    code: "IN",
-    name: "India",
-    views: 124.8,
-    observations: 129832,
-    engagement: 2.58,
-    topSignal: "T-Series",
-  },
-  {
-    code: "GB",
-    name: "United Kingdom",
-    views: 21.4,
-    observations: 9740,
-    engagement: 4.04,
-    topSignal: "xxxtentacion",
-  },
-  {
-    code: "US",
-    name: "United States",
-    views: 11.9,
-    observations: 7620,
-    engagement: 3.37,
-    topSignal: "Marvel Entertainment",
-  },
-  {
-    code: "CA",
-    name: "Canada",
-    views: 7.7,
-    observations: 11012,
-    engagement: 2.99,
-    topSignal: "Entertainment",
-  },
+  { code: "CA", name: "Canada", views: 46.9, observations: 40881, engagement: 3.89, topSignal: "Marvel Entertainment" },
+  { code: "DE", name: "Germany", views: 24.6, observations: 40840, engagement: 4.09, topSignal: "Marvel Entertainment" },
+  { code: "FR", name: "France", views: 17.1, observations: 40724, engagement: 4.58, topSignal: "Dude Perfect" },
+  { code: "GB", name: "United Kingdom", views: 230.1, observations: 38916, engagement: 2.5, topSignal: "NickyJamTV" },
+  { code: "IN", name: "India", views: 39.6, observations: 37352, engagement: 2.81, topSignal: "T-Series" },
+  { code: "JP", name: "Japan", views: 5.4, observations: 20523, engagement: 3.53, topSignal: "ibighit" },
+  { code: "KR", name: "South Korea", views: 14.7, observations: 34567, engagement: 3.34, topSignal: "Marvel Entertainment" },
+  { code: "MX", name: "Mexico", views: 13.8, observations: 40451, engagement: 5.23, topSignal: "Marvel Entertainment" },
+  { code: "RU", name: "Russia", views: 9.8, observations: 40739, engagement: 5.9, topSignal: "ibighit" },
+  { code: "US", name: "United States", views: 96.7, observations: 40949, engagement: 3.5, topSignal: "ChildishGambinoVEVO" },
 ];
 
 const channels = [
-  { name: "T-Series", region: "IN", views: 2.12, appearances: 221 },
-  { name: "Marvel Entertainment", region: "IN", views: 1.28, appearances: 65 },
-  { name: "FoxStarHindi", region: "IN", views: 1.26, appearances: 56 },
-  { name: "Amit Bhadana", region: "IN", views: 1.02, appearances: 140 },
-  { name: "Speed Records", region: "IN", views: 0.8, appearances: 197 },
-  { name: "NickyJamTV", region: "GB", views: 8.52, appearances: 56 },
-  { name: "Ozuna", region: "GB", views: 8.31, appearances: 85 },
-  { name: "Bad Bunny", region: "GB", views: 6.89, appearances: 36 },
-  { name: "DrakeVEVO", region: "GB", views: 6.58, appearances: 62 },
-  { name: "ChildishGambinoVEVO", region: "GB", views: 6.1, appearances: 36 },
-  { name: "ChildishGambinoVEVO", region: "US", views: 3.76, appearances: 25 },
-  { name: "ibighit", region: "US", views: 2.24, appearances: 80 },
-  { name: "Dude Perfect", region: "US", views: 1.87, appearances: 131 },
-  { name: "Marvel Entertainment", region: "US", views: 1.81, appearances: 125 },
-  { name: "ArianaGrandeVevo", region: "US", views: 1.58, appearances: 43 },
   { name: "Marvel Entertainment", region: "CA", views: 1.01, appearances: 39 },
   { name: "T-Series", region: "CA", views: 0.8, appearances: 81 },
   { name: "Dude Perfect", region: "CA", views: 0.73, appearances: 70 },
   { name: "YouTube Spotlight", region: "CA", views: 0.64, appearances: 13 },
   { name: "ibighit", region: "CA", views: 0.51, appearances: 19 },
+  { name: "Marvel Entertainment", region: "DE", views: 0.59, appearances: 20 },
+  { name: "Dude Perfect", region: "DE", views: 0.41, appearances: 44 },
+  { name: "ibighit", region: "DE", views: 0.37, appearances: 15 },
+  { name: "YouTube Spotlight", region: "DE", views: 0.37, appearances: 6 },
+  { name: "PewDiePie", region: "DE", views: 0.31, appearances: 85 },
+  { name: "Dude Perfect", region: "FR", views: 0.31, appearances: 34 },
+  { name: "ibighit", region: "FR", views: 0.29, appearances: 15 },
+  { name: "YouTube Spotlight", region: "FR", views: 0.25, appearances: 5 },
+  { name: "PewDiePie", region: "FR", views: 0.24, appearances: 71 },
+  { name: "Marvel Entertainment", region: "FR", views: 0.22, appearances: 16 },
+  { name: "NickyJamTV", region: "GB", views: 8.52, appearances: 56 },
+  { name: "Ozuna", region: "GB", views: 8.31, appearances: 85 },
+  { name: "Bad Bunny", region: "GB", views: 6.89, appearances: 36 },
+  { name: "DrakeVEVO", region: "GB", views: 6.58, appearances: 62 },
+  { name: "ChildishGambinoVEVO", region: "GB", views: 6.1, appearances: 36 },
+  { name: "T-Series", region: "IN", views: 2.12, appearances: 221 },
+  { name: "Marvel Entertainment", region: "IN", views: 1.28, appearances: 65 },
+  { name: "FoxStarHindi", region: "IN", views: 1.26, appearances: 56 },
+  { name: "Amit Bhadana", region: "IN", views: 1.02, appearances: 140 },
+  { name: "Speed Records", region: "IN", views: 0.8, appearances: 197 },
+  { name: "ibighit", region: "JP", views: 0.34, appearances: 14 },
+  { name: "Marvel Entertainment", region: "JP", views: 0.15, appearances: 15 },
+  { name: "MLG Highlights", region: "JP", views: 0.11, appearances: 56 },
+  { name: "Sony Pictures Entertainment", region: "JP", views: 0.09, appearances: 6 },
+  { name: "SpaceX", region: "JP", views: 0.08, appearances: 8 },
+  { name: "Marvel Entertainment", region: "KR", views: 0.95, appearances: 29 },
+  { name: "ibighit", region: "KR", views: 0.89, appearances: 33 },
+  { name: "jypentertainment", region: "KR", views: 0.36, appearances: 38 },
+  { name: "YouTube Spotlight", region: "KR", views: 0.34, appearances: 4 },
+  { name: "ChildishGambinoVEVO", region: "KR", views: 0.24, appearances: 6 },
+  { name: "Marvel Entertainment", region: "MX", views: 0.38, appearances: 19 },
+  { name: "YouTube Spotlight", region: "MX", views: 0.26, appearances: 7 },
+  { name: "ibighit", region: "MX", views: 0.25, appearances: 13 },
+  { name: "MalumaVEVO", region: "MX", views: 0.23, appearances: 20 },
+  { name: "Dude Perfect", region: "MX", views: 0.17, appearances: 25 },
+  { name: "ibighit", region: "RU", views: 0.24, appearances: 11 },
+  { name: "Трум Трум", region: "RU", views: 0.18, appearances: 144 },
+  { name: "PewDiePie", region: "RU", views: 0.15, appearances: 50 },
+  { name: "вДудь", region: "RU", views: 0.13, appearances: 55 },
+  { name: "Алексей Навальный", region: "RU", views: 0.13, appearances: 102 },
+  { name: "ChildishGambinoVEVO", region: "US", views: 3.76, appearances: 25 },
+  { name: "ibighit", region: "US", views: 2.24, appearances: 80 },
+  { name: "Dude Perfect", region: "US", views: 1.87, appearances: 131 },
+  { name: "Marvel Entertainment", region: "US", views: 1.81, appearances: 125 },
+  { name: "ArianaGrandeVevo", region: "US", views: 1.58, appearances: 43 },
 ];
 
-const categories = [
-  { name: "Entertainment", share: 35.2, views: 58.33, color: "var(--coral)" },
-  { name: "Music", share: 25.9, views: 42.92, color: "var(--gold)" },
-  { name: "Film & Animation", share: 9.2, views: 15.24, color: "var(--sage)" },
-  { name: "Comedy", share: 7.1, views: 11.76, color: "var(--bronze)" },
-  { name: "People & Blogs", share: 7.1, views: 11.76, color: "var(--ink-soft)" },
-  { name: "News & Politics", share: 4.2, views: 6.96, color: "var(--blue)" },
-  { name: "Other", share: 11.3, views: 18.73, color: "var(--line-strong)" },
+const categoryColors = [
+  "var(--coral)",
+  "var(--gold)",
+  "var(--sage)",
+  "var(--bronze)",
+  "var(--ink-soft)",
+  "var(--blue)",
+  "var(--line-strong)",
 ];
 
-const categoriesByRegion = {
-  ALL: categories,
-  IN: [
-    { name: "Entertainment", share: 40.7, views: 16.12, color: "var(--coral)" },
-    { name: "Music", share: 25.6, views: 10.15, color: "var(--gold)" },
-    { name: "Film & Animation", share: 9.7, views: 3.85, color: "var(--sage)" },
-    { name: "Comedy", share: 7.3, views: 2.89, color: "var(--bronze)" },
-    { name: "News & Politics", share: 5, views: 1.99, color: "var(--blue)" },
-    { name: "Sports", share: 3.5, views: 1.38, color: "var(--ink-soft)" },
-  ],
-  GB: [
-    { name: "Music", share: 74.4, views: 171.16, color: "var(--gold)" },
-    { name: "Entertainment", share: 12.9, views: 29.79, color: "var(--coral)" },
-    { name: "Film & Animation", share: 3.6, views: 8.36, color: "var(--sage)" },
-    { name: "People & Blogs", share: 2.5, views: 5.75, color: "var(--ink-soft)" },
-    { name: "Comedy", share: 1.7, views: 3.96, color: "var(--bronze)" },
-    { name: "Sports", share: 1.5, views: 3.34, color: "var(--blue)" },
-  ],
-  US: [
-    { name: "Music", share: 41.5, views: 40.13, color: "var(--gold)" },
-    { name: "Entertainment", share: 21.3, views: 20.6, color: "var(--coral)" },
-    { name: "Film & Animation", share: 7.5, views: 7.28, color: "var(--sage)" },
-    { name: "Comedy", share: 5.3, views: 5.12, color: "var(--bronze)" },
-    { name: "People & Blogs", share: 5.1, views: 4.92, color: "var(--ink-soft)" },
-    { name: "Sports", share: 4.6, views: 4.4, color: "var(--blue)" },
-  ],
-  CA: [
-    { name: "Entertainment", share: 29.2, views: 13.67, color: "var(--coral)" },
-    { name: "Music", share: 28.1, views: 13.18, color: "var(--gold)" },
-    { name: "Comedy", share: 7.9, views: 3.71, color: "var(--bronze)" },
-    { name: "People & Blogs", share: 6.9, views: 3.23, color: "var(--ink-soft)" },
-    { name: "Sports", share: 6.4, views: 3, color: "var(--blue)" },
-    { name: "Film & Animation", share: 6.3, views: 2.94, color: "var(--sage)" },
-  ],
-} satisfies Record<string, typeof categories>;
+const categorySharesByRegion: Record<string, Array<[string, number]>> = {
+  ALL: [["Music", 51.3], ["Entertainment", 21], ["Other", 8.9], ["Film & Animation", 5.4], ["People & Blogs", 4.5], ["Comedy", 4.4], ["Sports", 3.6]],
+  CA: [["Entertainment", 29.2], ["Music", 28.1], ["Comedy", 7.9], ["People & Blogs", 6.9], ["Sports", 6.4], ["Film & Animation", 6.3], ["Other", 15.3]],
+  DE: [["Entertainment", 32.9], ["Music", 23.1], ["People & Blogs", 8.9], ["Sports", 7.9], ["Film & Animation", 7.1], ["Comedy", 6.7], ["Other", 13.5]],
+  FR: [["Music", 29.4], ["Entertainment", 22.1], ["Sports", 11.7], ["Comedy", 11.1], ["People & Blogs", 7.5], ["Film & Animation", 5.4], ["Other", 12.9]],
+  GB: [["Music", 74.4], ["Entertainment", 12.9], ["Film & Animation", 3.6], ["People & Blogs", 2.5], ["Comedy", 1.7], ["Sports", 1.5], ["Other", 3.3]],
+  IN: [["Entertainment", 40.7], ["Music", 25.6], ["Film & Animation", 9.7], ["Comedy", 7.3], ["News & Politics", 5], ["Sports", 3.5], ["Other", 8.2]],
+  JP: [["Entertainment", 32.8], ["Music", 19.9], ["People & Blogs", 10.9], ["Sports", 10.8], ["Film & Animation", 5.8], ["Comedy", 5.2], ["Other", 14.5]],
+  KR: [["Entertainment", 31.1], ["Music", 25.8], ["People & Blogs", 10.1], ["Film & Animation", 8.1], ["News & Politics", 8], ["Comedy", 5], ["Other", 11.8]],
+  MX: [["Music", 30], ["Entertainment", 29.1], ["Sports", 10], ["People & Blogs", 8.9], ["Comedy", 5.7], ["News & Politics", 3.5], ["Other", 12.7]],
+  RU: [["Entertainment", 21.3], ["Music", 16.4], ["People & Blogs", 16], ["Comedy", 10.4], ["News & Politics", 7.5], ["Film & Animation", 5.5], ["Other", 22.9]],
+  US: [["Music", 41.5], ["Entertainment", 21.3], ["Film & Animation", 7.5], ["Comedy", 5.3], ["People & Blogs", 5.1], ["Sports", 4.6], ["Other", 14.7]],
+};
+
+const totalRegionalViews = regionData.reduce((sum, region) => sum + region.views, 0);
+const categoriesByRegion = Object.fromEntries(
+  Object.entries(categorySharesByRegion).map(([regionCode, rows]) => {
+    const regionViews =
+      regionCode === "ALL"
+        ? totalRegionalViews
+        : regionData.find((region) => region.code === regionCode)?.views ?? 0;
+    return [
+      regionCode,
+      rows.map(([name, share], index) => ({
+        name,
+        share,
+        views: Number(((regionViews * share) / 100).toFixed(2)),
+        color: categoryColors[index],
+      })),
+    ];
+  }),
+);
+const categories = categoriesByRegion.ALL;
+
+type ExecutionNodeStatus = "PENDING" | "RUNNING" | "SUCCEEDED" | "FAILED";
+type ExecutionStatus =
+  | "IDLE"
+  | "RUNNING"
+  | "SUCCEEDED"
+  | "FAILED"
+  | "TIMED_OUT"
+  | "ABORTED";
+
+type StepExecution = {
+  configured?: boolean;
+  executionArn?: string;
+  name?: string;
+  status?: ExecutionStatus;
+  startedAt?: string;
+  stoppedAt?: string;
+  states?: Record<string, ExecutionNodeStatus>;
+  events?: Array<{
+    id?: number;
+    timestamp?: string;
+    type?: string;
+    state?: string;
+  }>;
+  error?: string;
+};
+
+const stepGraphNodes = [
+  { id: "IngestFromYouTubeAPI", label: "IngestFromYouTubeAPI", type: "Task", icon: "λ", x: 44, y: 72 },
+  { id: "WaitForS3Consistency", label: "WaitForS3Consistency", type: "Wait", icon: "◷", x: 254, y: 72 },
+  { id: "ProcessInParallel", label: "ProcessInParallel", type: "Parallel", icon: "⇉", x: 464, y: 72 },
+  { id: "TransformReferenceData", label: "TransformReferenceData", type: "Lambda invoke", icon: "λ", x: 674, y: 18 },
+  { id: "RunBronzeToSilverGlueJob", label: "RunBronzeToSilverGlueJob", type: "Glue .sync", icon: "◆", x: 674, y: 126 },
+  { id: "RunDataQualityChecks", label: "RunDataQualityChecks", type: "Task", icon: "λ", x: 884, y: 72 },
+  { id: "EvaluateDataQuality", label: "EvaluateDataQuality", type: "Choice", icon: "◇", x: 1094, y: 72 },
+  { id: "RunSilverToGoldGlueJob", label: "RunSilverToGoldGlueJob", type: "Glue .sync", icon: "◆", x: 1304, y: 72 },
+  { id: "NotifySuccess", label: "NotifySuccess", type: "SNS publish", icon: "✉", x: 1514, y: 72 },
+] as const;
+
+const stepGraphEdges = [
+  ["IngestFromYouTubeAPI", "WaitForS3Consistency"],
+  ["WaitForS3Consistency", "ProcessInParallel"],
+  ["ProcessInParallel", "TransformReferenceData"],
+  ["ProcessInParallel", "RunBronzeToSilverGlueJob"],
+  ["TransformReferenceData", "RunDataQualityChecks"],
+  ["RunBronzeToSilverGlueJob", "RunDataQualityChecks"],
+  ["RunDataQualityChecks", "EvaluateDataQuality"],
+  ["EvaluateDataQuality", "RunSilverToGoldGlueJob"],
+  ["RunSilverToGoldGlueJob", "NotifySuccess"],
+] as const;
+
+function stepEdgePath(fromId: string, toId: string) {
+  const from = stepGraphNodes.find((node) => node.id === fromId)!;
+  const to = stepGraphNodes.find((node) => node.id === toId)!;
+  const startX = from.x + 170;
+  const startY = from.y + 34;
+  const endX = to.x;
+  const endY = to.y + 34;
+  const middleX = startX + (endX - startX) / 2;
+  return `M ${startX} ${startY} H ${middleX} V ${endY} H ${endX}`;
+}
 
 const compact = new Intl.NumberFormat("en", { notation: "compact" });
 
@@ -608,6 +680,67 @@ export default function Home() {
   const [categoryMetric, setCategoryMetric] =
     useState<CategoryMetric>("share");
   const [categoryFocus, setCategoryFocus] = useState("ALL");
+  const [stepExecution, setStepExecution] = useState<StepExecution>({
+    status: "IDLE",
+  });
+  const [stepBusy, setStepBusy] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/step-functions")
+      .then((response) => response.json())
+      .then((payload: StepExecution) => {
+        if (!cancelled) {
+          setStepExecution(
+            payload.executionArn
+              ? payload
+              : (current) => ({
+                  ...current,
+                  configured: payload.configured,
+                }),
+          );
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStepExecution((current) => ({
+            ...current,
+            configured: false,
+          }));
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      !stepExecution.executionArn ||
+      stepExecution.status !== "RUNNING"
+    ) {
+      return;
+    }
+
+    const executionArn = stepExecution.executionArn;
+    const poll = window.setInterval(async () => {
+      try {
+        const response = await fetch(
+          `/api/step-functions?executionArn=${encodeURIComponent(executionArn)}`,
+          { cache: "no-store" },
+        );
+        const payload = (await response.json()) as StepExecution;
+        setStepExecution(payload);
+      } catch {
+        setStepExecution((current) => ({
+          ...current,
+          error: "The execution is still running, but the latest status could not be loaded.",
+        }));
+      }
+    }, 2500);
+
+    return () => window.clearInterval(poll);
+  }, [stepExecution.executionArn, stepExecution.status]);
 
   const selectedStage = useMemo(
     () =>
@@ -691,6 +824,35 @@ export default function Home() {
     setActiveStage(pipelineStages[nextIndex].id);
   }
 
+  async function startStepExecution() {
+    setStepBusy(true);
+    setStepExecution((current) => ({
+      ...current,
+      error: undefined,
+    }));
+    try {
+      const response = await fetch("/api/step-functions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ regions: regionData.map((region) => region.code) }),
+      });
+      const payload = (await response.json()) as StepExecution;
+      if (!response.ok) throw new Error(payload.error ?? "Execution could not be started.");
+      setStepExecution(payload);
+    } catch (error) {
+      setStepExecution((current) => ({
+        ...current,
+        status: current.status === "RUNNING" ? current.status : "IDLE",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Execution could not be started.",
+      }));
+    } finally {
+      setStepBusy(false);
+    }
+  }
+
   return (
     <main>
       <nav className="site-nav" aria-label="Primary navigation">
@@ -702,6 +864,7 @@ export default function Home() {
         </a>
         <div className="nav-links">
           <a href="#architecture">Architecture</a>
+          <a href="#executions">Executions</a>
           <a href="#analytics">Analytics</a>
           <a href="#proof">Run proof</a>
         </div>
@@ -799,15 +962,15 @@ export default function Home() {
 
       <section className="snapshot-band" aria-label="Production snapshot">
         <div>
-          <strong>158,204</strong>
+          <strong>375,942</strong>
           <span>trending observations</span>
         </div>
         <div>
-          <strong>165.7B</strong>
+          <strong>498.7B</strong>
           <span>views represented</span>
         </div>
         <div>
-          <strong>4</strong>
+          <strong>10</strong>
           <span>active Gold regions</span>
         </div>
         <div>
@@ -979,6 +1142,176 @@ export default function Home() {
               <li>Gold aggregation</li>
               <li>Notify</li>
             </ol>
+          </div>
+        </div>
+      </section>
+
+      <section className="execution-section" id="executions">
+        <header className="section-heading execution-heading">
+          <div>
+            <p className="eyebrow">AWS operations · live control plane</p>
+            <h2>Run the state machine. Watch every state change.</h2>
+          </div>
+          <p>
+            This console starts the deployed Step Functions workflow through the
+            server-side AWS environment, then polls execution history until the
+            run reaches a terminal state.
+          </p>
+        </header>
+
+        <div className="aws-console">
+          <div className="aws-console-topbar">
+            <div className="aws-console-brand">
+              <span className="aws-cube" aria-hidden="true">◆</span>
+              <strong>Step Functions</strong>
+            </div>
+            <div className="aws-console-context">
+              <span>State machines</span>
+              <span aria-hidden="true">›</span>
+              <strong>yt-data-pipeline-orchestration</strong>
+            </div>
+            <span className="aws-region">N. Virginia</span>
+          </div>
+
+          <div className="aws-execution-header">
+            <div>
+              <p className="aws-breadcrumb">Executions / {stepExecution.name ?? "New execution"}</p>
+              <h3>{stepExecution.name ?? "yt-data-pipeline-orchestration"}</h3>
+              <div className="aws-execution-meta">
+                <span
+                  className={`aws-status aws-status-${(stepExecution.status ?? "IDLE").toLowerCase()}`}
+                >
+                  <i aria-hidden="true" />
+                  {stepExecution.status === "IDLE"
+                    ? "Ready"
+                    : stepExecution.status}
+                </span>
+                <span>
+                  {stepExecution.startedAt
+                    ? `Started ${new Date(stepExecution.startedAt).toLocaleString()}`
+                    : `${regionData.length} configured regions`}
+                </span>
+                <span>Standard workflow</span>
+              </div>
+            </div>
+            <div className="aws-execution-actions">
+              <a
+                href="https://console.aws.amazon.com/states/home?region=us-east-1#/statemachines"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open in AWS
+              </a>
+              <button
+                type="button"
+                onClick={startStepExecution}
+                disabled={stepBusy || stepExecution.status === "RUNNING"}
+              >
+                <span aria-hidden="true">▶</span>
+                {stepBusy
+                  ? "Starting…"
+                  : stepExecution.status === "RUNNING"
+                    ? "Execution running"
+                    : "Start new execution"}
+              </button>
+            </div>
+          </div>
+
+          {stepExecution.error && (
+            <div className="aws-alert" role="alert">
+              <strong>Execution request was not completed.</strong>
+              <span>{stepExecution.error}</span>
+            </div>
+          )}
+
+          <div className="aws-console-tabs" role="tablist" aria-label="Execution views">
+            <button type="button" role="tab" aria-selected="true">Graph view</button>
+            <button type="button" role="tab" aria-selected="false">Table view</button>
+            <button type="button" role="tab" aria-selected="false">Execution input and output</button>
+          </div>
+
+          <div className="aws-console-workspace">
+            <aside className="aws-state-list" aria-label="Execution states">
+              <div>
+                <strong>States</strong>
+                <span>{stepGraphNodes.length}</span>
+              </div>
+              <ol>
+                {stepGraphNodes.map((node, index) => {
+                  const status =
+                    stepExecution.states?.[node.id] ??
+                    ("PENDING" as ExecutionNodeStatus);
+                  return (
+                    <li className={`is-${status.toLowerCase()}`} key={node.id}>
+                      <span>{index + 1}</span>
+                      <p><strong>{node.label}</strong><small>{node.type}</small></p>
+                      <i aria-label={status} />
+                    </li>
+                  );
+                })}
+              </ol>
+            </aside>
+
+            <div className="aws-graph-scroll" role="region" aria-label="AWS Step Functions execution graph" tabIndex={0}>
+              <div className="aws-graph-canvas">
+                <svg viewBox="0 0 1730 230" aria-hidden="true">
+                  <defs>
+                    <marker id="step-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                      <path d="M 0 0 L 8 4 L 0 8 z" />
+                    </marker>
+                  </defs>
+                  {stepGraphEdges.map(([from, to]) => (
+                    <path d={stepEdgePath(from, to)} key={`${from}-${to}`} />
+                  ))}
+                </svg>
+                {stepGraphNodes.map((node) => {
+                  const status =
+                    stepExecution.states?.[node.id] ??
+                    ("PENDING" as ExecutionNodeStatus);
+                  return (
+                    <article
+                      className={`aws-state-node is-${status.toLowerCase()}`}
+                      style={{ left: node.x, top: node.y }}
+                      key={node.id}
+                    >
+                      <span>{node.icon}</span>
+                      <p><strong>{node.label}</strong><small>{node.type}</small></p>
+                      <i aria-label={status} />
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <div className="aws-history">
+            <div className="aws-history-head">
+              <div><h4>Events</h4><span>{stepExecution.events?.length ?? 0} recent</span></div>
+              <span>Execution history updates every 2.5 seconds while running</span>
+            </div>
+            <div className="aws-history-table">
+              <div className="aws-history-row is-heading">
+                <span>ID</span><span>Timestamp</span><span>Type</span><span>State</span>
+              </div>
+              {(stepExecution.events?.length
+                ? stepExecution.events
+                : [
+                    {
+                      id: 0,
+                      timestamp: undefined,
+                      type: "Waiting for a new execution",
+                      state: "—",
+                    },
+                  ]
+              ).map((event) => (
+                <div className="aws-history-row" key={`${event.id}-${event.type}`}>
+                  <span>{event.id || "—"}</span>
+                  <span>{event.timestamp ? new Date(event.timestamp).toLocaleTimeString() : "—"}</span>
+                  <span>{event.type}</span>
+                  <span>{event.state ?? "—"}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
