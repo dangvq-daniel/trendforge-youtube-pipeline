@@ -611,6 +611,7 @@ type ExecutionStatus =
   | "FAILED"
   | "TIMED_OUT"
   | "ABORTED";
+type ExecutionView = "graph" | "table" | "io";
 
 type StepExecution = {
   configured?: boolean;
@@ -619,6 +620,8 @@ type StepExecution = {
   status?: ExecutionStatus;
   startedAt?: string;
   stoppedAt?: string;
+  input?: string;
+  output?: string;
   states?: Record<string, ExecutionNodeStatus>;
   events?: Array<{
     id?: number;
@@ -639,23 +642,44 @@ const stepGraphNodes = [
   { id: "EvaluateDataQuality", label: "EvaluateDataQuality", type: "Choice", icon: "◇", x: 1094, y: 72 },
   { id: "RunSilverToGoldGlueJob", label: "RunSilverToGoldGlueJob", type: "Glue .sync", icon: "◆", x: 1304, y: 72 },
   { id: "NotifySuccess", label: "NotifySuccess", type: "SNS publish", icon: "✉", x: 1514, y: 72 },
+  { id: "NotifyIngestionFailure", label: "NotifyIngestionFailure", type: "SNS publish", icon: "✉", x: 44, y: 222, path: "failure" },
+  { id: "NotifyTransformFailure", label: "NotifyTransformFailure", type: "SNS publish", icon: "✉", x: 464, y: 222, path: "failure" },
+  { id: "NotifyDQFailure", label: "NotifyDQFailure", type: "SNS publish", icon: "✉", x: 1094, y: 222, path: "failure" },
+  { id: "NotifyGoldFailure", label: "NotifyGoldFailure", type: "SNS publish", icon: "✉", x: 1304, y: 222, path: "failure" },
 ] as const;
 
-const stepGraphEdges = [
-  ["IngestFromYouTubeAPI", "WaitForS3Consistency"],
-  ["WaitForS3Consistency", "ProcessInParallel"],
-  ["ProcessInParallel", "TransformReferenceData"],
-  ["ProcessInParallel", "RunBronzeToSilverGlueJob"],
-  ["TransformReferenceData", "RunDataQualityChecks"],
-  ["RunBronzeToSilverGlueJob", "RunDataQualityChecks"],
-  ["RunDataQualityChecks", "EvaluateDataQuality"],
-  ["EvaluateDataQuality", "RunSilverToGoldGlueJob"],
-  ["RunSilverToGoldGlueJob", "NotifySuccess"],
+const stepGraphEdges: Array<{
+  from: string;
+  to: string;
+  kind?: "failure";
+}> = [
+  { from: "IngestFromYouTubeAPI", to: "WaitForS3Consistency" },
+  { from: "WaitForS3Consistency", to: "ProcessInParallel" },
+  { from: "ProcessInParallel", to: "TransformReferenceData" },
+  { from: "ProcessInParallel", to: "RunBronzeToSilverGlueJob" },
+  { from: "TransformReferenceData", to: "RunDataQualityChecks" },
+  { from: "RunBronzeToSilverGlueJob", to: "RunDataQualityChecks" },
+  { from: "RunDataQualityChecks", to: "EvaluateDataQuality" },
+  { from: "EvaluateDataQuality", to: "RunSilverToGoldGlueJob" },
+  { from: "RunSilverToGoldGlueJob", to: "NotifySuccess" },
+  { from: "IngestFromYouTubeAPI", to: "NotifyIngestionFailure", kind: "failure" },
+  { from: "ProcessInParallel", to: "NotifyTransformFailure", kind: "failure" },
+  { from: "RunDataQualityChecks", to: "NotifyDQFailure", kind: "failure" },
+  { from: "EvaluateDataQuality", to: "NotifyDQFailure", kind: "failure" },
+  { from: "RunSilverToGoldGlueJob", to: "NotifyGoldFailure", kind: "failure" },
 ] as const;
 
-function stepEdgePath(fromId: string, toId: string) {
+function stepEdgePath(fromId: string, toId: string, kind?: string) {
   const from = stepGraphNodes.find((node) => node.id === fromId)!;
   const to = stepGraphNodes.find((node) => node.id === toId)!;
+  if (kind === "failure") {
+    const startX = from.x + 85;
+    const startY = from.y + 68;
+    const endX = to.x + 85;
+    const endY = to.y;
+    const middleY = startY + (endY - startY) / 2;
+    return `M ${startX} ${startY} V ${middleY} H ${endX} V ${endY}`;
+  }
   const startX = from.x + 170;
   const startY = from.y + 34;
   const endX = to.x;
@@ -684,6 +708,8 @@ export default function Home() {
     status: "IDLE",
   });
   const [stepBusy, setStepBusy] = useState(false);
+  const [executionView, setExecutionView] =
+    useState<ExecutionView>("graph");
 
   useEffect(() => {
     let cancelled = false;
@@ -1225,64 +1251,135 @@ export default function Home() {
           )}
 
           <div className="aws-console-tabs" role="tablist" aria-label="Execution views">
-            <button type="button" role="tab" aria-selected="true">Graph view</button>
-            <button type="button" role="tab" aria-selected="false">Table view</button>
-            <button type="button" role="tab" aria-selected="false">Execution input and output</button>
+            {([
+              ["graph", "Graph view"],
+              ["table", "Table view"],
+              ["io", "Execution input and output"],
+            ] as const).map(([view, label]) => (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={executionView === view}
+                aria-controls={`execution-${view}-panel`}
+                onClick={() => setExecutionView(view)}
+                key={view}
+              >
+                {label}
+              </button>
+            ))}
           </div>
 
-          <div className="aws-console-workspace">
-            <aside className="aws-state-list" aria-label="Execution states">
-              <div>
-                <strong>States</strong>
-                <span>{stepGraphNodes.length}</span>
-              </div>
-              <ol>
-                {stepGraphNodes.map((node, index) => {
-                  const status =
-                    stepExecution.states?.[node.id] ??
-                    ("PENDING" as ExecutionNodeStatus);
-                  return (
-                    <li className={`is-${status.toLowerCase()}`} key={node.id}>
-                      <span>{index + 1}</span>
-                      <p><strong>{node.label}</strong><small>{node.type}</small></p>
-                      <i aria-label={status} />
-                    </li>
-                  );
-                })}
-              </ol>
-            </aside>
+          {executionView === "graph" && (
+            <div
+              className="aws-console-workspace"
+              id="execution-graph-panel"
+              role="tabpanel"
+            >
+              <aside className="aws-state-list" aria-label="Execution states">
+                <div>
+                  <strong>States</strong>
+                  <span>{stepGraphNodes.length}</span>
+                </div>
+                <ol>
+                  {stepGraphNodes.map((node, index) => {
+                    const status =
+                      stepExecution.states?.[node.id] ??
+                      ("PENDING" as ExecutionNodeStatus);
+                    return (
+                      <li className={`is-${status.toLowerCase()}`} key={node.id}>
+                        <span>{index + 1}</span>
+                        <p><strong>{node.label}</strong><small>{node.type}</small></p>
+                        <i aria-label={status} />
+                      </li>
+                    );
+                  })}
+                </ol>
+              </aside>
 
-            <div className="aws-graph-scroll" role="region" aria-label="AWS Step Functions execution graph" tabIndex={0}>
-              <div className="aws-graph-canvas">
-                <svg viewBox="0 0 1730 230" aria-hidden="true">
-                  <defs>
-                    <marker id="step-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
-                      <path d="M 0 0 L 8 4 L 0 8 z" />
-                    </marker>
-                  </defs>
-                  {stepGraphEdges.map(([from, to]) => (
-                    <path d={stepEdgePath(from, to)} key={`${from}-${to}`} />
-                  ))}
-                </svg>
-                {stepGraphNodes.map((node) => {
-                  const status =
-                    stepExecution.states?.[node.id] ??
-                    ("PENDING" as ExecutionNodeStatus);
-                  return (
-                    <article
-                      className={`aws-state-node is-${status.toLowerCase()}`}
-                      style={{ left: node.x, top: node.y }}
-                      key={node.id}
-                    >
-                      <span>{node.icon}</span>
-                      <p><strong>{node.label}</strong><small>{node.type}</small></p>
-                      <i aria-label={status} />
-                    </article>
-                  );
-                })}
+              <div className="aws-graph-scroll" role="region" aria-label="AWS Step Functions execution graph" tabIndex={0}>
+                <div className="aws-graph-canvas">
+                  <svg viewBox="0 0 1730 330" aria-hidden="true">
+                    <defs>
+                      <marker id="step-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                        <path d="M 0 0 L 8 4 L 0 8 z" />
+                      </marker>
+                      <marker id="step-arrow-failure" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                        <path d="M 0 0 L 8 4 L 0 8 z" />
+                      </marker>
+                    </defs>
+                    {stepGraphEdges.map((edge) => (
+                      <path
+                        className={edge.kind === "failure" ? "is-failure" : ""}
+                        d={stepEdgePath(edge.from, edge.to, edge.kind)}
+                        key={`${edge.from}-${edge.to}`}
+                      />
+                    ))}
+                  </svg>
+                  {stepGraphNodes.map((node) => {
+                    const status =
+                      stepExecution.states?.[node.id] ??
+                      ("PENDING" as ExecutionNodeStatus);
+                    return (
+                      <article
+                        className={`aws-state-node is-${status.toLowerCase()} ${"path" in node && node.path === "failure" ? "is-notification" : ""}`}
+                        style={{ left: node.x, top: node.y }}
+                        key={node.id}
+                      >
+                        <span>{node.icon}</span>
+                        <p><strong>{node.label}</strong><small>{node.type}</small></p>
+                        <i aria-label={status} />
+                      </article>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {executionView === "table" && (
+            <div
+              className="aws-state-table-panel"
+              id="execution-table-panel"
+              role="tabpanel"
+            >
+              <div className="aws-state-table-row is-heading">
+                <span>#</span><span>State name</span><span>Type</span><span>Path</span><span>Status</span>
+              </div>
+              {stepGraphNodes.map((node, index) => {
+                const status =
+                  stepExecution.states?.[node.id] ??
+                  ("PENDING" as ExecutionNodeStatus);
+                return (
+                  <div className="aws-state-table-row" key={node.id}>
+                    <span>{index + 1}</span>
+                    <strong>{node.label}</strong>
+                    <span>{node.type}</span>
+                    <span>{"path" in node && node.path === "failure" ? "Failure → SNS" : "Main workflow"}</span>
+                    <span className={`aws-table-status is-${status.toLowerCase()}`}>
+                      <i aria-hidden="true" />{status}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {executionView === "io" && (
+            <div
+              className="aws-io-panel"
+              id="execution-io-panel"
+              role="tabpanel"
+            >
+              <section>
+                <h4>Execution input</h4>
+                <pre>{stepExecution.input ?? "Input appears after an execution starts."}</pre>
+              </section>
+              <section>
+                <h4>Execution output</h4>
+                <pre>{stepExecution.output ?? (stepExecution.status === "RUNNING" ? "Execution is still running." : "Output appears after an execution completes.")}</pre>
+              </section>
+            </div>
+          )}
 
           <div className="aws-history">
             <div className="aws-history-head">

@@ -1,0 +1,23 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "StartAndListPipelineExecutions",
+      "Effect": "Allow",
+      "Action": [
+        "states:StartExecution",
+        "states:ListExecutions"
+      ],
+      "Resource": "arn:aws:states:us-east-1:066196453068:stateMachine:yt-data-pipeline-orchestration"
+    },
+    {
+      "Sid": "ReadPipelineExecutionStatus",
+      "Effect": "Allow",
+      "Action": [
+        "states:DescribeExecution",
+        "states:GetExecutionHistory"
+      ],
+      "Resource": "arn:aws:states:us-east-1:066196453068:execution:yt-data-pipeline-orchestration:*"
+    }
+  ]
+}

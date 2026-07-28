@@ -25,6 +25,10 @@ const stateNames = [
   "EvaluateDataQuality",
   "RunSilverToGoldGlueJob",
   "NotifySuccess",
+  "NotifyIngestionFailure",
+  "NotifyTransformFailure",
+  "NotifyDQFailure",
+  "NotifyGoldFailure",
 ] as const;
 
 type StateName = (typeof stateNames)[number];
@@ -204,6 +208,8 @@ async function executionPayload(executionArn: string) {
       status?: string;
       startDate?: number;
       stopDate?: number;
+      input?: string;
+      output?: string;
     }>("DescribeExecution", { executionArn }),
     awsJson<{ events?: AwsHistoryEvent[] }>("GetExecutionHistory", {
       executionArn,
@@ -219,6 +225,8 @@ async function executionPayload(executionArn: string) {
     status: execution.status,
     startedAt: isoTimestamp(execution.startDate),
     stoppedAt: isoTimestamp(execution.stopDate),
+    input: execution.input,
+    output: execution.output,
     states: summarizeHistory(events, execution.status),
     events: events
       .slice(-12)
@@ -262,7 +270,23 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const origin = request.headers.get("origin");
-  if (origin && new URL(origin).host !== request.nextUrl.host) {
+  const fetchSite = request.headers.get("sec-fetch-site");
+  const requestHosts = new Set(
+    [
+      request.nextUrl.host,
+      request.headers.get("host"),
+      request.headers.get("x-forwarded-host")?.split(",")[0]?.trim(),
+    ].filter(Boolean),
+  );
+  let originAllowed = !origin || fetchSite === "same-origin";
+  if (origin && !originAllowed) {
+    try {
+      originAllowed = requestHosts.has(new URL(origin).host);
+    } catch {
+      originAllowed = false;
+    }
+  }
+  if (!originAllowed) {
     return NextResponse.json(
       { error: "Cross-origin execution requests are not allowed." },
       { status: 403 },
